@@ -29,14 +29,20 @@ PLATFORM="unknown"
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     PLATFORM="macos"
+    echo -e "${GREEN}Detected platform: ${PURPLE}$PLATFORM${RESET}"
+    if ! command -v pkg-config &> /dev/null; then
+        echo -e "${RED}Error: pkg-config is not installed.${RESET}"
+        echo -e "${YELLOW}Please run: brew install pkg-config${RESET}"
+        exit 1
+    fi
 elif [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* || "$OSTYPE" == "win"* ]]; then
     PLATFORM="windows"
+    echo -e "${GREEN}Detected platform: ${PURPLE}$PLATFORM${RESET}"
 else
     echo -e "${RED}Unsupported OS type: $OSTYPE${RESET}"
     exit 1
 fi
 
-echo -e "${GREEN}Detected platform: ${PURPLE}$PLATFORM${RESET}"
 # * platform detect end
 
 # bootstrap it to generate ./external/vcpkg/vcpkg or ./external/vcpkg/vcpkg.exe
@@ -78,6 +84,12 @@ echo -e "${CYAN}Installing packages ... ${RESET}"
 # > CHANGE: ADD YOUR PACKAGES HERE; vcpkg-install <package_name>
 vcpkg-install sfml
 echo -e "${CYAN}To install packages run ./external/vcpkg/vcpkg install <package_name>${RESET}"
+
+# clean build directory if exists
+if [ -d "build" ]; then
+    echo -e "${YELLOW}Cleaning existing build directory...${RESET}"
+    rm -rf build
+fi
 
 # setup cmake preset; REMOVE after setting up preset
 cmake --preset default-configure

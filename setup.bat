@@ -42,6 +42,12 @@ external\vcpkg\vcpkg.exe install sfml
 echo %CYAN%To install packages run:%RESET%
 echo %PURPLE%external\vcpkg\vcpkg.exe install ^<package_name^>%RESET%
 
+:: remove existing build directory if exists
+if exist "build" (
+    echo %YELLOW%Removing existing build directory ... %RESET%
+    rmdir /s /q "build"
+)
+
 :: setup cmake preset; REMOVE after setting up preset
 cmake --preset default-configure
 
