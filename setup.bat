@@ -22,7 +22,7 @@ set "RESET=%ESC%[0m"
 
 :: update submodules
 echo %CYAN%Updating git submodules ... %RESET%
-git submodule update --init --recursive
+git submodule update --init --recursive --depth 1
 
 echo %CYAN%Assuming Platform is Windows ... %RESET%
 
