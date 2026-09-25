@@ -15,12 +15,9 @@ readonly GREEN RED YELLOW CYAN PURPLE RESET
 
 set -e
 
-# DO NOT CALL; has been called once; given below for reference only
-# git submodule add --depth 1 https://github.com/microsoft/vcpkg.git external/vcpkg
-
-# update submodules
-echo -e "${CYAN}Updating git submodules ... ${RESET}"
-git submodule update --init --recursive --depth 1
+# cloning vcpkg
+echo -e "${CYAN}Cloning vcpkg ... ${RESET}"
+git clone https://github.com/microsoft/vcpkg.git --depth 1 external/vcpkg
 
 # * platform detect
 echo -e "${CYAN}Detecting platform ... ${RESET}"
