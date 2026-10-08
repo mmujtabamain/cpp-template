@@ -14,7 +14,7 @@ endif()
 set(VCPKG_ROOT "${ROOT}/external/vcpkg")
 if(NOT EXISTS "${VCPKG_ROOT}")
     file(MAKE_DIRECTORY "${ROOT}/external")
-    execute_process(COMMAND "${GIT_EXECUTABLE}" clone https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}" COMMAND_ERROR_IS_FATAL ANY)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" clone --depth 1 https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}" COMMAND_ERROR_IS_FATAL ANY)
 endif()
 # Also recover a first setup interrupted between clone and Git metadata removal.
 file(REMOVE_RECURSE "${VCPKG_ROOT}/.git")

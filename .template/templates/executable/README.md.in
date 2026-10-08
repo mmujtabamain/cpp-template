@@ -42,6 +42,9 @@ vcpkg chooses its native triplet. To override it, set `VCPKG_DEFAULT_TRIPLET`
 in your environment before setup and keep it set during configuration and run.
 Custom presets must use the same triplet and `VCPKG_INSTALLED_DIR` as setup.
 
+GitHub Actions builds this project on macOS and Windows using the same setup
+and development presets. Its workflow is independent of `.template/`.
+
 ## Finishing generation
 
 Once you are satisfied with the generated project and no longer need

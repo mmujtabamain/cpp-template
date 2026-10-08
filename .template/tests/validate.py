@@ -79,6 +79,10 @@ class ScaffoldTests(unittest.TestCase):
                     self.assertEqual(json.loads((p / 'vcpkg.json').read_text())['dependencies'], ['fmt'])
                     self.assertIn(display, (p / 'README.md').read_text())
                     command(['cmake', '--list-presets'], p)
+                    workflow = (p / '.github/workflows/validate.yml').read_text()
+                    self.assertNotIn('.template/', workflow)
+                    self.assertNotIn('@PROJECT_TYPE@', workflow)
+                    self.assertIn(f"'{kind}' == 'library'", workflow)
                     self.assertFalse((p / '.cpp-template-scaffolded').exists())
                     self.assertFalse((p / '.template/.scaffold-tmp').exists())
                     if kind == 'library':
@@ -109,7 +113,7 @@ class ScaffoldTests(unittest.TestCase):
             result = scaffold(self.project, 'Replacement', 'exec', answer=answer)
             self.assertIn('cancelled', result.stdout)
             self.assertEqual(before, snapshot(self.project))
-        for path in ('.git/keep', 'external/vcpkg/keep', 'notes.txt'):
+        for path in ('.git/keep', 'external/vcpkg/keep', '.github/keep', 'notes.txt'):
             p = self.project / path
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text('preserve')
@@ -119,7 +123,7 @@ class ScaffoldTests(unittest.TestCase):
         self.assertIn('permanently erase', result.stdout)
         for path in ('include', 'tests', 'examples', 'cmake', 'src/valuable.cpp', 'build', 'vcpkg_installed'):
             self.assertFalse((self.project / path).exists(), path)
-        for path in ('.git/keep', 'external/vcpkg/keep', 'notes.txt', '.template', 'scaffold.sh', 'scaffold.bat'):
+        for path in ('.git/keep', 'external/vcpkg/keep', '.github/keep', 'notes.txt', '.template', 'scaffold.sh', 'scaffold.bat'):
             self.assertTrue((self.project / path).exists(), path)
         self.assertIn('Replacement', (self.project / 'src/main.cpp').read_text())
 
@@ -157,6 +161,24 @@ class ScaffoldTests(unittest.TestCase):
         result = scaffold(self.project, kind='exec', force=True, success=False)
         self.assertIn('missing src/main.cpp', result.stdout)
         self.assertEqual(original, (self.project / 'src/vector_math.cpp').read_bytes())
+
+    def test_run_requires_setup(self):
+        scaffold(self.project)
+        result = command(['cmake', '-P', self.project / 'scripts/run.cmake'],
+                         self.project, success=False)
+        self.assertIn('Run setup.sh / setup.bat first', result.stdout)
+        self.assertFalse((self.project / 'external').exists())
+
+    def test_existing_bootstrap_failure_preserves_tree(self):
+        scaffold(self.project)
+        tree = self.project / 'external/vcpkg'
+        tree.mkdir(parents=True)
+        script = tree / ('bootstrap-vcpkg.bat' if WINDOWS else 'bootstrap-vcpkg.sh')
+        script.write_text('@exit /b 1\n' if WINDOWS else '#!/bin/sh\nexit 1\n')
+        result = command(['cmake', '-P', self.project / 'scripts/setup.cmake'],
+                         self.project, success=False)
+        self.assertIn('vcpkg bootstrap failed', result.stdout)
+        self.assertTrue(script.is_file())
 
     def test_malformed_vcpkg_fails_without_removal(self):
         scaffold(self.project)
@@ -210,7 +232,12 @@ def integration(parent):
     (lib / 'external').mkdir()
     shutil.move(vcpkg, lib / 'external/vcpkg')
     shutil.copytree(p / 'vcpkg_installed', lib / 'vcpkg_installed')
+    # Existing sources with a missing binary must bootstrap without cloning.
+    local_vcpkg = lib / 'external/vcpkg' / ('vcpkg.exe' if WINDOWS else 'vcpkg')
+    local_vcpkg.unlink()
     launcher(lib, 'setup')
+    assert local_vcpkg.exists()
+    assert (lib / 'external/vcpkg/reuse-marker').read_text() == 'keep'
     launcher(lib, 'setup')
     for shared in (False, True):
         flavor = 'shared' if shared else 'static'

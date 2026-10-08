@@ -34,7 +34,8 @@ cmake "-DPROJECT_DISPLAY_NAME=Vector Math" -DPROJECT_TYPE=library -P .template/s
 Scaffold validates and renders a complete replacement before asking to erase an
 existing project. The default answer is no. Confirmation (or `SCAFFOLD_FORCE=ON`)
 permanently replaces generated sources, headers, assets, examples, tests,
-CMake files, README, scripts, build output, and installed dependencies. It
+CMake files, README, scripts, the generated CI workflow, build output, and
+installed dependencies. It
 preserves Git, `.template/`, scaffold launchers, `external/vcpkg/`, and unrelated
 files. Names must start with an ASCII letter and use letters, digits, spaces,
 underscores or hyphens; reserved identifiers are rejected.
