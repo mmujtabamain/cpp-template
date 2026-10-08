@@ -1,0 +1,96 @@
+# @PROJECT_DISPLAY_NAME@
+
+Installable C++23 library: `@PROJECT_NAME@::@PROJECT_NAME@`.
+
+## Development
+
+Install CMake 3.24+, Ninja, Git, and a compiler supporting C++23. On macOS,
+install the Xcode command line tools. On Windows, install Visual Studio C++
+build tools and run commands from a Developer Command Prompt.
+
+```sh
+./setup.sh
+./run.sh
+```
+
+On Windows use `setup.bat` and `run.bat`. Pass `release` to either launcher
+for a release build; debug is the default. Manual builds:
+
+```sh
+cmake --preset debug
+cmake --build --preset debug
+cmake --preset release
+cmake --build --preset release
+```
+
+`scaffold` is destructive, one-time project initialization. `setup` is repeatable
+machine setup. `run` configures, builds, and runs the CMake `run` target.
+Another developer cloning this generated project only needs setup and run.
+Setup never removes build output. To clean, remove `build/` yourself.
+
+## Dependencies
+
+Edit `vcpkg.json` to add dependencies, then rerun setup. The starter dependency
+is `fmt`. Setup clones the latest vcpkg into ignored `external/vcpkg/`, removes
+its `.git`, bootstraps it, and installs the manifest into `vcpkg_installed/`.
+Later setup runs reuse that copy. There is no pinned revision or submodule.
+Remove `external/vcpkg/` manually if you need a fresh copy.
+
+Dependency installation belongs to setup; run does not install dependencies.
+Presets disable vcpkg's automatic manifest installation for this reason.
+vcpkg chooses its native triplet. To override it, set `VCPKG_DEFAULT_TRIPLET`
+in your environment before setup and keep it set during configuration and run.
+Custom presets must use the same triplet and `VCPKG_INSTALLED_DIR` as setup.
+
+## Finishing generation
+
+Once you are satisfied with the generated project and no longer need
+re-scaffolding, you may remove `.template/`, `scaffold.sh`, and `scaffold.bat`.
+No build or development script depends on them. Until then, re-scaffolding
+requires destructive confirmation and erases generated source changes.
+
+## Library development
+
+`run` runs the example program. Public headers live in
+`include/@PROJECT_NAMESPACE@/`; implementation and private headers live in
+`src/`. The DLL export header is generated in the build tree and installed
+with the public headers. Mark public symbols with `@PROJECT_MACRO@_EXPORT`.
+
+Examples and CTest tests default to enabled only when this is the top-level
+project. Consumers using `add_subdirectory()` get the library alone; override
+`@PROJECT_MACRO@_BUILD_EXAMPLES` and `@PROJECT_MACRO@_BUILD_TESTS` as needed.
+
+```sh
+cmake --build --preset debug
+ctest --preset debug
+# Static is the default. Switch to shared (a DLL on Windows):
+cmake --preset debug -DBUILD_SHARED_LIBS=ON
+cmake --build --preset debug
+ctest --preset debug
+cmake --install build/debug --prefix /path/to/install --config Debug
+```
+
+Switch back with `-DBUILD_SHARED_LIBS=OFF`. Install a release build by replacing
+`debug`/`Debug` with `release`/`Release`. Installation includes the library,
+headers, export header, targets, package config, and version config.
+
+## Consuming the installed package
+
+```cmake
+find_package(@PROJECT_NAME@ 0.1 CONFIG REQUIRED)
+add_executable(consumer main.cpp)
+target_link_libraries(consumer PRIVATE @PROJECT_NAME@::@PROJECT_NAME@)
+```
+
+```cpp
+#include <@PROJECT_NAMESPACE@/@PROJECT_NAMESPACE@.hpp>
+int main() { return @PROJECT_NAMESPACE@::add(2, 3) == 5 ? 0 : 1; }
+```
+
+Set `CMAKE_PREFIX_PATH` to the install prefix and make `fmt` available, such as
+through the consumer's own vcpkg manifest and toolchain. The package resolves
+`fmt` using `find_dependency`. No original source checkout is needed.
+For shared builds on Windows, put the installed `bin/` and dependency DLL
+locations on `PATH` when running the consumer. Other platforms likewise need
+runtime libraries on their loader search path if installed outside standard
+locations.

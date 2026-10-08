@@ -1,0 +1,6 @@
+#include <@PROJECT_NAMESPACE@/@PROJECT_NAMESPACE@.hpp>
+
+int main()
+{
+    return @PROJECT_NAMESPACE@::add(2, 3) == 5 ? 0 : 1;
+}

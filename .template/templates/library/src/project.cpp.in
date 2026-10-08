@@ -1,0 +1,12 @@
+#include <@PROJECT_NAMESPACE@/@PROJECT_NAMESPACE@.hpp>
+#include <fmt/core.h>
+
+namespace @PROJECT_NAMESPACE@
+{
+    int add(int a, int b)
+    {
+        const int result = a + b;
+        fmt::print("{} + {} = {}\n", a, b, result);
+        return result;
+    }
+}

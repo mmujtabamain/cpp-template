@@ -1,0 +1,9 @@
+#include <@PROJECT_NAMESPACE@/@PROJECT_NAMESPACE@.hpp>
+
+int main()
+{
+    if (@PROJECT_NAMESPACE@::add(2, 3) != 5) return 1;
+    if (@PROJECT_NAMESPACE@::add(-4, 4) != 0) return 1;
+    if (@PROJECT_NAMESPACE@::add(0, 0) != 0) return 1;
+    return 0;
+}

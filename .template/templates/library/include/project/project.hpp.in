@@ -1,0 +1,7 @@
+#pragma once
+#include <@PROJECT_NAMESPACE@/export.hpp>
+
+namespace @PROJECT_NAMESPACE@
+{
+    @PROJECT_MACRO@_EXPORT int add(int a, int b);
+}
