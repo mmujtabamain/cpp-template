@@ -1,0 +1,21 @@
+name: Validate C++ template
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - name: Scaffold, repeat setup, run, test, install and consume
+        run: python .template/tests/validate.py --integration
