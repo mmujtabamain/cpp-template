@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 WINDOWS = os.name == 'nt'
 
 
+# Capture subprocess output so failures include the command and its diagnostics.
 def command(args, cwd, *, input='', env=None, success=True):
     result = subprocess.run([str(x) for x in args], cwd=cwd, input=input,
                             text=True, stdout=subprocess.PIPE,
@@ -25,6 +26,7 @@ def command(args, cwd, *, input='', env=None, success=True):
     return result
 
 
+# Exercise disposable repository copies, never the developer's generated project.
 def fresh(parent, name):
     project = parent / name
     project.mkdir()
@@ -35,6 +37,7 @@ def fresh(parent, name):
     return project
 
 
+# Call the shared implementation directly to test validation and confirmation behavior.
 def scaffold(project, name='Vector Math', kind='library', *, force=False,
              answer='', success=True):
     args = ['cmake', f'-DPROJECT_DISPLAY_NAME={name}', f'-DPROJECT_TYPE={kind}']
@@ -44,6 +47,7 @@ def scaffold(project, name='Vector Math', kind='library', *, force=False,
                    project, input=answer, success=success)
 
 
+# Also exercise the native entry points on the host platform.
 def launcher(project, name, *args, input=''):
     if WINDOWS:
         return command(['cmd', '/c', str(project / (name + '.bat')), *args],
@@ -51,11 +55,13 @@ def launcher(project, name, *args, input=''):
     return command([project / (name + '.sh'), *args], project, input=input)
 
 
+# Detect any file-content changes when a scaffold must cancel or reject input.
 def snapshot(project):
     return {str(p.relative_to(project)): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in project.rglob('*') if p.is_file()}
 
 
+# Fast checks require CMake and Python but do not download dependencies.
 class ScaffoldTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='cpp-template-')
@@ -300,6 +306,7 @@ endif()
     print('Integration checks passed', flush=True)
 
 
+# Run fast checks first; opt into network-dependent builds and consumer checks explicitly.
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--integration', action='store_true')

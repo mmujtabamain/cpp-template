@@ -1,3 +1,5 @@
+# Shared one-time generator for the shell and Batch launchers.
+# Render and validate in staging before allowing destructive replacement.
 cmake_minimum_required(VERSION 3.24)
 get_filename_component(ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 set(TEMPLATES "${ROOT}/.template/templates")
@@ -19,6 +21,7 @@ endif()
 string(REGEX REPLACE "([A-Z]+)([A-Z][a-z])" "\\1_\\2" WORDS "${PROJECT_DISPLAY_NAME}")
 string(REGEX REPLACE "([a-z0-9])([A-Z])" "\\1_\\2" WORDS "${WORDS}")
 string(REGEX REPLACE "[ _-]+" ";" WORDS "${WORDS}")
+# Preserve this placeholder for the generated library's later CMake configure step.
 set(PACKAGE_INIT "@PACKAGE_INIT@")
 set(PROJECT_NAME "")
 set(PROJECT_NAMESPACE "")
@@ -44,8 +47,10 @@ endif()
 string(TOUPPER "${PROJECT_NAMESPACE}" PROJECT_MACRO)
 string(REPLACE "_" "-" PROJECT_MANIFEST_NAME "${PROJECT_NAMESPACE}")
 
+# Discard interrupted staging output; existing project files remain untouched here.
 file(REMOVE_RECURSE "${STAGE}")
 file(MAKE_DIRECTORY "${STAGE}")
+# Render common development tools, then the selected project type.
 foreach(KIND common "${PROJECT_TYPE}")
     if(KIND STREQUAL "exec")
         set(KIND executable)
@@ -53,6 +58,7 @@ foreach(KIND common "${PROJECT_TYPE}")
     file(GLOB_RECURSE INPUTS LIST_DIRECTORIES false RELATIVE "${TEMPLATES}/${KIND}" "${TEMPLATES}/${KIND}/*")
     foreach(INPUT IN LISTS INPUTS)
         set(OUTPUT "${INPUT}")
+        # Replace generic library paths with the normalized package and namespace names.
         if(KIND STREQUAL "library")
             string(REPLACE "include/project/project.hpp" "include/${PROJECT_NAMESPACE}/${PROJECT_NAMESPACE}.hpp" OUTPUT "${OUTPUT}")
             string(REPLACE "src/project.cpp" "src/${PROJECT_NAMESPACE}.cpp" OUTPUT "${OUTPUT}")
@@ -75,6 +81,7 @@ else()
     set(TYPE_REQUIRED "include/${PROJECT_NAMESPACE}/${PROJECT_NAMESPACE}.hpp" "src/${PROJECT_NAMESPACE}.cpp"
         examples/main.cpp "tests/${PROJECT_NAMESPACE}_test.cpp" "cmake/${PROJECT_NAME}Config.cmake.in")
 endif()
+# Check required files and JSON before asking to replace the existing project.
 foreach(REQUIRED ${TYPE_REQUIRED} CMakeLists.txt CMakePresets.json vcpkg.json README.md scripts/setup.cmake scripts/run.cmake setup.sh setup.bat run.sh run.bat)
     if(NOT EXISTS "${STAGE}/${REQUIRED}")
         message(FATAL_ERROR "Incomplete staged project: missing ${REQUIRED}. Existing project is untouched.")
@@ -87,8 +94,10 @@ foreach(JSON CMakePresets.json vcpkg.json)
         message(FATAL_ERROR "Invalid staged ${JSON}: ${JSON_ERROR}. Existing project is untouched.")
     endif()
 endforeach()
+# Generated Unix launchers must be executable immediately after scaffolding.
 file(CHMOD "${STAGE}/setup.sh" "${STAGE}/run.sh" PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
+# Only these reserved paths may be replaced; Git, tooling, and unrelated files survive.
 set(OWNED CMakeLists.txt CMakePresets.json vcpkg.json README.md src include assets examples tests cmake scripts setup.sh setup.bat run.sh run.bat build vcpkg_installed .github/workflows/validate.yml)
 set(EXISTING false)
 foreach(PATH IN LISTS OWNED)
@@ -97,6 +106,7 @@ foreach(PATH IN LISTS OWNED)
         set(EXISTING true)
     endif()
 endforeach()
+# Ask only after a replacement is ready. EOF and any answer other than yes cancel.
 if(EXISTING AND NOT SCAFFOLD_FORCE)
     message("An existing scaffolded project was detected.\n\nRe-scaffolding will permanently erase the existing generated project,\nincluding source files and changes made after scaffolding.\n\nContinue? [y/N]")
     if(CMAKE_HOST_WIN32)
@@ -116,6 +126,7 @@ endif()
 foreach(PATH IN LISTS OWNED)
     file(REMOVE_RECURSE "${ROOT}/${PATH}")
 endforeach()
+# Move individual files to preserve unrelated content in shared directories such as .github.
 file(GLOB_RECURSE OUTPUTS LIST_DIRECTORIES true RELATIVE "${STAGE}" "${STAGE}/*")
 foreach(OUTPUT IN LISTS OUTPUTS)
     if(IS_DIRECTORY "${STAGE}/${OUTPUT}")
