@@ -13,22 +13,22 @@ tools on macOS; Visual Studio C++ tools and a Developer Command Prompt on Window
 ```
 
 On Windows use `scaffold.bat`, `setup.bat`, and `run.bat`. Scaffold asks for a
-display name and `exec` or `library`. For example, `Vector Math` becomes the
-CMake/package target `VectorMath`, namespace/header directory `vector_math`,
-and vcpkg manifest name `vector-math`.
+display name and `exec` or `library`. For example, `Sample Library` becomes the
+CMake/package target `SampleLibrary`, namespace/header directory `sample_library`,
+and vcpkg manifest name `sample-library`.
 
 For automation:
 
 ```sh
-./scaffold.sh "Vector Math" library
+./scaffold.sh "Sample Library" library
 # Explicit destructive recovery, without an interactive prompt:
-./scaffold.sh "Vector Math" library --force
+./scaffold.sh "Sample Library" library --force
 ```
 
 Batch accepts the same arguments. You can also call CMake directly:
 
 ```sh
-cmake "-DPROJECT_DISPLAY_NAME=Vector Math" -DPROJECT_TYPE=library -P .template/scripts/scaffold.cmake
+cmake "-DPROJECT_DISPLAY_NAME=Sample Library" -DPROJECT_TYPE=library -P .template/scripts/scaffold.cmake
 ```
 
 Scaffold validates and renders a complete replacement before asking to erase an
@@ -52,11 +52,11 @@ project only runs setup and run. You may remove `.template/`, `scaffold.sh`, and
 `scaffold.bat` after accepting the generated project; it has no dependency on
 template machinery.
 
-Template sources and validation live under `.template/`. Run validation with:
+Template sources live under `.template/`; validation lives under `.github/validation/`. Run validation with:
 
 ```sh
-python3 .template/tests/validate.py
-python3 .template/tests/validate.py --integration
+python3 .github/validate.py
+python3 .github/validate.py --integration
 ```
 
 The integration mode uses real upstream vcpkg and fmt and requires network
