@@ -4,21 +4,17 @@
 import argparse
 import unittest
 
-from validation.integration_tests import IntegrationTests
-from validation.hook_tests import GitHookTests
-from validation.scaffold_tests import (
-    DevelopmentScriptTests,
-    ScaffoldGenerationTests,
-    ScaffoldSafetyTests,
-)
-
-# MARK: Suite composition
+from validation.tests.scaffold_gen_tests import ScaffoldGenerationTests
+from validation.tests.scaffold_safety_tests import ScaffoldSafetyTests
+from validation.tests.dev_script_tests import DevelopmentScriptTests
+from validation.tests.hook_tests import GitHookTests
+from validation.tests.integration_tests import IntegrationTests
 
 
 class ValidationApplication:
     """Select suites; scenario classes own assertions and workspace cleanup."""
 
-    def run(self, *, integration=False):
+    def run(self, *, integration=False) -> int:
         test_classes = [
             ScaffoldGenerationTests,
             ScaffoldSafetyTests,
@@ -36,10 +32,8 @@ class ValidationApplication:
         return 0 if result.wasSuccessful() else 1
 
 
-# MARK: Command line entry point
-
-
-def main():
+# MARK: Entry
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--integration",

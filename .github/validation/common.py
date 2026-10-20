@@ -5,14 +5,14 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import tempfile
+import unittest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 IS_WINDOWS = os.name == "nt"
 
 
-# MARK: Process execution
-
-
+# MARK: Command Runner
 class CommandRunner:
     """Capture diagnostics and check the expected exit status in one place."""
 
@@ -37,15 +37,9 @@ class CommandRunner:
         return result
 
 
-# Keep test scenarios readable while allowing the process adapter to be replaced.
-command = CommandRunner.run
-
-
-# MARK: Disposable project operations
-
-
+# MARK: Project Workspace
 class ProjectWorkspace:
-    """Own file operations without deciding which validation suite should run."""
+    """Disposible Project Workspace."""
 
     def __init__(self, repository_root=REPOSITORY_ROOT):
         self.repository_root = repository_root
@@ -81,19 +75,26 @@ class ProjectWorkspace:
         }
 
 
-fresh = ProjectWorkspace().create
-snapshot = ProjectWorkspace.snapshot
+# MARK: Scaffold Fixture
+class ScaffoldFixture(unittest.TestCase):
+    """Create a fresh disposable repository for each scenario."""
+
+    def setUp(self):
+        self.temporary_directory = tempfile.TemporaryDirectory(prefix="cpp-template-")
+        self.addCleanup(self.temporary_directory.cleanup)
+        self.workspace = Path(self.temporary_directory.name)
+        self.project = ProjectWorkspace().create(self.workspace, "project with spaces")
 
 
 def scaffold(
     project,
-    name="Sample Library",
-    project_type="library",
+    name,
+    project_type,
     *,
     force=False,
     answer="",
     success=True,
-):
+) -> subprocess.CompletedProcess:
     """Exercise shared CMake validation and destructive-replacement confirmation."""
     arguments = [
         "cmake",
@@ -102,7 +103,7 @@ def scaffold(
     ]
     if force:
         arguments.append("-DSCAFFOLD_FORCE=ON")
-    return command(
+    return CommandRunner.run(
         arguments + ["-P", project / ".template/scripts/scaffold.cmake"],
         project,
         input=answer,
@@ -110,10 +111,10 @@ def scaffold(
     )
 
 
-def launcher(project, name, *arguments, input=""):
+def launcher(project, name, *arguments, input="") -> subprocess.CompletedProcess:
     """Exercise the native shell or Batch entry point on this host."""
     if IS_WINDOWS:
         invocation = ["cmd", "/c", str(project / (name + ".bat")), *arguments]
     else:
         invocation = [project / (name + ".sh"), *arguments]
-    return command(invocation, project, input=input)
+    return CommandRunner.run(invocation, project, input=input)

@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from .support import command, fresh
+from ..common import command, fresh
 
 # MARK: Real Git repository fixture
 

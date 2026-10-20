@@ -1,11 +1,11 @@
 #!/bin/sh
-# Git for Windows also runs hooks through its bundled POSIX shell.
-# Prefer the same local interpreter used for repository development.
+
 set -eu
 
 repository_root=$(git rev-parse --show-toplevel)
-validation_hook="$repository_root/.github/hooks/validate-commit.py"
+validation_hook="$repository_root/.github/hooks/scripts/validate-commit.py"
 
+# get python executable [python|python3]
 if [ -x "$repository_root/.venv/bin/python" ]; then
     python_executable="$repository_root/.venv/bin/python"
 elif [ -x "$repository_root/.venv/Scripts/python.exe" ]; then
@@ -19,19 +19,20 @@ else
     echo "Python 3 is required to run template validation." >&2
 fi
 
+# if python in path, then
 if [ -n "$python_executable" ]; then
     if "$python_executable" "$validation_hook"; then
         exit 0
     fi
 fi
 
-# Apply the same policy if Python or the hook itself cannot start.
+# if main branch, exit with -1 to indicate error
 if current_branch=$(git symbolic-ref --quiet --short HEAD); then
     if [ "$current_branch" = main ]; then
         echo "ERROR: Template validation failed; commit to main blocked." >&2
         exit 1
     fi
-else
+else # if branch not detected, fail to be safe
     branch_status=$?
     if [ "$branch_status" -ne 1 ]; then
         echo "ERROR: Cannot determine the branch for commit validation." >&2
@@ -39,5 +40,6 @@ else
     fi
 fi
 
+# for branches other than main, show warning and allow commit
 echo "WARNING: Template validation could not complete; commit allowed outside main." >&2
 exit 0

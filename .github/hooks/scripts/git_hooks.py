@@ -1,14 +1,11 @@
-"""Validate the Git index while keeping branch policy separate from test suites."""
-
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 
-# MARK: Staged repository access
 
-
+# MARK: Git Repository
 class GitRepository:
     """Export the proposed commit without stashing or changing working files."""
 
@@ -38,9 +35,7 @@ class GitRepository:
         )
 
 
-# MARK: Validation and branch policy
-
-
+# MARK: Staged Validator
 class StagedValidator:
     """Execute validation from an isolated snapshot using the current Python."""
 
@@ -79,6 +74,7 @@ class StagedValidator:
         return result.returncode
 
 
+# MARK: Commit Validation
 class CommitValidation:
     """Apply main-branch enforcement to an independently replaceable validator."""
 

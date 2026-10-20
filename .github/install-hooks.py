@@ -9,6 +9,7 @@ HOOKS_PATH = ".github/hooks"
 
 
 def main():
+    # check existing local hooks path
     result = subprocess.run(
         ["git", "config", "--local", "--get", "core.hooksPath"],
         cwd=REPOSITORY_ROOT,
@@ -19,21 +20,25 @@ def main():
     if result.returncode not in (0, 1):
         result.check_returncode()
     existing_path = result.stdout.strip()
+    # if present raise error
     if existing_path and existing_path != HOOKS_PATH:
         raise SystemExit(
             f"Existing local core.hooksPath is {existing_path!r}. "
             "Integrate these hooks with your existing hooks before changing it."
         )
 
+    # make sure hooks are executable
     for filename in ("pre-commit", "pre-merge-commit"):
         hook = REPOSITORY_ROOT / HOOKS_PATH / filename
         hook.chmod(hook.stat().st_mode | 0o111)
 
+    # set local hooks path
     subprocess.run(
         ["git", "config", "--local", "core.hooksPath", HOOKS_PATH],
         cwd=REPOSITORY_ROOT,
         check=True,
     )
+
     print("Installed commit and merge validation hooks for this clone.")
 
 
