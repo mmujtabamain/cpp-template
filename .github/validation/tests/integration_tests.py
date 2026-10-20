@@ -7,7 +7,7 @@ import tempfile
 from textwrap import dedent
 import unittest
 
-from .support import IS_WINDOWS, command, fresh, launcher, scaffold
+from ..common import IS_WINDOWS, CommandRunner, ProjectWorkspace, launcher, scaffold
 
 # MARK: Real dependency lifecycle
 
@@ -31,7 +31,7 @@ class IntegrationTests(unittest.TestCase):
     # MARK: Executable setup, sources, assets, and configurations
 
     def _validate_executable(self, workspace):
-        project = fresh(workspace, "integration executable")
+        project = ProjectWorkspace().create(workspace, "integration executable")
         scaffold(project, "SampleRuntime", "exec")
         print(
             "Integration: first setup (clone/bootstrap/install/configure)", flush=True
@@ -74,7 +74,7 @@ class IntegrationTests(unittest.TestCase):
         launcher(project, "setup", "release")
         launcher(project, "run", "release")
         # Multi-config generators must run the real target and copy assets beside it.
-        command(
+        CommandRunner.run(
             [
                 "cmake",
                 "-S",
@@ -89,7 +89,7 @@ class IntegrationTests(unittest.TestCase):
             ],
             project,
         )
-        command(
+        CommandRunner.run(
             [
                 "cmake",
                 "--build",
@@ -108,8 +108,8 @@ class IntegrationTests(unittest.TestCase):
     # MARK: Static/shared exports and installed consumers
 
     def _validate_library(self, workspace, project, vcpkg_directory):
-        library_project = fresh(workspace, "integration library")
-        scaffold(library_project)
+        library_project = ProjectWorkspace().create(workspace, "integration library")
+        scaffold(library_project, "Sample Library", "library")
         (library_project / "external").mkdir()
         shutil.move(vcpkg_directory, library_project / "external/vcpkg")
         shutil.copytree(
@@ -142,7 +142,7 @@ class IntegrationTests(unittest.TestCase):
                 f"Integration: {library_kind} library, example, CTest, install and consumer",
                 flush=True,
             )
-            command(
+            CommandRunner.run(
                 [
                     "cmake",
                     "--preset",
@@ -152,10 +152,12 @@ class IntegrationTests(unittest.TestCase):
                 library_project,
             )
             launcher(library_project, "run")
-            command(["cmake", "--build", "--preset", "debug"], library_project)
-            command(["ctest", "--preset", "debug"], library_project)
+            CommandRunner.run(
+                ["cmake", "--build", "--preset", "debug"], library_project
+            )
+            CommandRunner.run(["ctest", "--preset", "debug"], library_project)
             install_prefix = workspace / f"install-{library_kind}"
-            command(
+            CommandRunner.run(
                 [
                     "cmake",
                     "--install",
@@ -217,7 +219,7 @@ class IntegrationTests(unittest.TestCase):
                 library_project / (directory + "-hidden")
             )
         try:
-            command(
+            CommandRunner.run(
                 [
                     "cmake",
                     "-S",
@@ -231,7 +233,7 @@ class IntegrationTests(unittest.TestCase):
                 ],
                 consumer,
             )
-            command(["cmake", "--build", consumer / "build"], consumer)
+            CommandRunner.run(["cmake", "--build", consumer / "build"], consumer)
             environment = os.environ.copy()
             environment["PATH"] = os.pathsep.join(
                 [
@@ -241,7 +243,7 @@ class IntegrationTests(unittest.TestCase):
                     environment.get("PATH", ""),
                 ]
             )
-            command(
+            CommandRunner.run(
                 [consumer / "build" / ("consumer.exe" if IS_WINDOWS else "consumer")],
                 consumer,
                 environment=environment,
@@ -274,7 +276,7 @@ class IntegrationTests(unittest.TestCase):
                     message(FATAL_ERROR "Consumer contains development targets")
                 endif()
                 """))
-        command(
+        CommandRunner.run(
             [
                 "cmake",
                 "-S",
@@ -287,7 +289,9 @@ class IntegrationTests(unittest.TestCase):
             ],
             consumer_project,
         )
-        command(["cmake", "--build", consumer_project / "build"], consumer_project)
+        CommandRunner.run(
+            ["cmake", "--build", consumer_project / "build"], consumer_project
+        )
         # Removing template machinery must leave the generated project fully usable.
         shutil.rmtree(library_project / ".template")
         (library_project / "scaffold.sh").unlink()

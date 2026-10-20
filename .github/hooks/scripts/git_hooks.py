@@ -63,7 +63,7 @@ class StagedValidator:
         }
         arguments = [sys.executable, str(validation_script)]
         if integration:
-            arguments.append("--integration")
+            arguments.append("--full")
 
         result = subprocess.run(
             arguments,

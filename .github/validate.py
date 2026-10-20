@@ -14,14 +14,14 @@ from validation.tests.integration_tests import IntegrationTests
 class ValidationApplication:
     """Select suites; scenario classes own assertions and workspace cleanup."""
 
-    def run(self, *, integration=False) -> int:
+    def run(self, *, full=False) -> int:
         test_classes = [
             ScaffoldGenerationTests,
             ScaffoldSafetyTests,
             DevelopmentScriptTests,
             GitHookTests,
         ]
-        if integration:
+        if full:
             test_classes.append(IntegrationTests)
 
         suite = unittest.TestSuite(
@@ -36,12 +36,12 @@ class ValidationApplication:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--integration",
+        "--full",
         action="store_true",
         help="also download real vcpkg/fmt and build, install, and consume both templates",
     )
     arguments = parser.parse_args()
-    return ValidationApplication().run(integration=arguments.integration)
+    return ValidationApplication().run(full=arguments.full)
 
 
 if __name__ == "__main__":

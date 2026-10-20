@@ -5,7 +5,7 @@ class DevelopmentScriptTests(ScaffoldFixture):
     """Check setup/run diagnostics without downloading dependencies."""
 
     def test_run_requires_setup(self):
-        scaffold(self.project)
+        self.scaffold()
         result = CommandRunner.run(
             ["cmake", "-P", self.project / "scripts/run.cmake"],
             self.project,
@@ -15,7 +15,7 @@ class DevelopmentScriptTests(ScaffoldFixture):
         self.assertFalse((self.project / "external").exists())
 
     def test_existing_bootstrap_failure_preserves_tree(self):
-        scaffold(self.project)
+        self.scaffold()
         vcpkg_directory = self.project / "external/vcpkg"
         vcpkg_directory.mkdir(parents=True)
         bootstrap_script = vcpkg_directory / (
@@ -33,7 +33,7 @@ class DevelopmentScriptTests(ScaffoldFixture):
         self.assertTrue(bootstrap_script.is_file())
 
     def test_malformed_vcpkg_fails_without_removal(self):
-        scaffold(self.project)
+        self.scaffold()
         vcpkg_directory = self.project / "external/vcpkg"
         vcpkg_directory.mkdir(parents=True)
         (vcpkg_directory / "keep").write_text("malformed tree")

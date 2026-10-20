@@ -39,7 +39,7 @@ class CommandRunner:
 
 # MARK: Project Workspace
 class ProjectWorkspace:
-    """Disposible Project Workspace."""
+    """Disposable Project Workspace."""
 
     def __init__(self, repository_root=REPOSITORY_ROOT):
         self.repository_root = repository_root
@@ -84,6 +84,9 @@ class ScaffoldFixture(unittest.TestCase):
         self.addCleanup(self.temporary_directory.cleanup)
         self.workspace = Path(self.temporary_directory.name)
         self.project = ProjectWorkspace().create(self.workspace, "project with spaces")
+
+    def scaffold(self, name="Sample Library", project_type="library", **options):
+        return scaffold(self.project, name, project_type, **options)
 
 
 def scaffold(

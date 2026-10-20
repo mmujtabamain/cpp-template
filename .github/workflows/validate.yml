@@ -29,7 +29,7 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - name: Scaffold, build, test, install, and consume
-        run: python .github/validate.py --integration
+        run: python .github/validate.py --full
       - name: Warn about failed validation
         if: failure()
         run: echo "::warning::Template validation failed. Fix failures before merging into main."

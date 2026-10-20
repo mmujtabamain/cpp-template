@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from ..common import command, fresh
+from ..common import CommandRunner, ProjectWorkspace
 
 # MARK: Real Git repository fixture
 
@@ -17,7 +17,9 @@ class GitHookTests(unittest.TestCase):
     def setUp(self):
         temporary_directory = tempfile.TemporaryDirectory(prefix="cpp-template-hooks-")
         self.addCleanup(temporary_directory.cleanup)
-        self.project = fresh(Path(temporary_directory.name), "repository with spaces")
+        self.project = ProjectWorkspace().create(
+            Path(temporary_directory.name), "repository with spaces"
+        )
         self.marker = self.project / ".template/validation-marker"
         self.marker.write_text("valid")
         (self.project / ".github/validate.py").write_text(
@@ -34,7 +36,7 @@ class GitHookTests(unittest.TestCase):
         self.git("config", "user.name", "Template Validation")
         self.git("config", "user.email", "validation@example.invalid")
         self.git("config", "commit.gpgsign", "false")
-        command(
+        CommandRunner.run(
             [sys.executable, self.project / ".github/install-hooks.py"],
             self.project,
             environment=self.environment,
@@ -43,7 +45,7 @@ class GitHookTests(unittest.TestCase):
         self.git("commit", "-m", "Create valid fixture")
 
     def git(self, *arguments, success=True):
-        return command(
+        return CommandRunner.run(
             ["git", *arguments],
             self.project,
             environment=self.environment,
@@ -64,7 +66,7 @@ class GitHookTests(unittest.TestCase):
     def test_main_commits_require_integration_and_feature_commits_use_fast_suite(self):
         validation_script = self.project / ".github/validate.py"
         validation_script.write_text(
-            "import sys\n" "raise SystemExit(0 if '--integration' in sys.argv else 1)\n"
+            "import sys\n" "raise SystemExit(0 if '--full' in sys.argv else 1)\n"
         )
         self.git("add", ".github/validate.py")
         self.git("commit", "-m", "Require full validation on main")
@@ -91,7 +93,7 @@ class GitHookTests(unittest.TestCase):
         self.assertIn("commit allowed", result.stdout)
 
     def test_hook_startup_failure_obeys_branch_policy(self):
-        (self.project / ".github/hooks/validate-commit.py").write_text(
+        (self.project / ".github/hooks/scripts/validate-commit.py").write_text(
             "raise RuntimeError('Cannot start validation')\n"
         )
         self.git("commit", "--allow-empty", "-m", "Block broken hook", success=False)
@@ -147,7 +149,7 @@ class GitHookTests(unittest.TestCase):
 
     def test_installer_preserves_custom_hooks_path(self):
         self.git("config", "core.hooksPath", "custom-hooks")
-        command(
+        CommandRunner.run(
             [sys.executable, self.project / ".github/install-hooks.py"],
             self.project,
             environment=self.environment,

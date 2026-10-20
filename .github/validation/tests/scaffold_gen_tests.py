@@ -1,5 +1,11 @@
 import json
-from ..common import command, fresh, launcher, scaffold, ScaffoldFixture
+from ..common import (
+    CommandRunner,
+    ProjectWorkspace,
+    launcher,
+    scaffold,
+    ScaffoldFixture,
+)
 
 
 class ScaffoldGenerationTests(ScaffoldFixture):
@@ -34,7 +40,9 @@ class ScaffoldGenerationTests(ScaffoldFixture):
                 manifest_name,
             ) in enumerate(names):
                 with self.subTest(project_type=project_type, name=display_name):
-                    project = fresh(self.workspace, f"{project_type}-{index}")
+                    project = ProjectWorkspace().create(
+                        self.workspace, f"{project_type}-{index}"
+                    )
                     scaffold(project, display_name, project_type)
                     self.assertRegex(
                         (project / "CMakeLists.txt").read_text(),
@@ -51,7 +59,7 @@ class ScaffoldGenerationTests(ScaffoldFixture):
                         ["fmt"],
                     )
                     self.assertIn(display_name, (project / "README.md").read_text())
-                    command(["cmake", "--list-presets"], project)
+                    CommandRunner.run(["cmake", "--list-presets"], project)
                     workflow = (project / ".github/workflows/validate.yml").read_text()
                     self.assertNotIn(".template/", workflow)
                     self.assertNotIn("@PROJECT_TYPE@", workflow)

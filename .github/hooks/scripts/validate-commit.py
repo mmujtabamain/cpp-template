@@ -4,7 +4,7 @@
 from pathlib import Path
 import sys
 
-GITHUB_DIRECTORY = Path(__file__).resolve().parents[1]
+GITHUB_DIRECTORY = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(GITHUB_DIRECTORY))
 
 from git_hooks import CommitValidation, GitRepository, StagedValidator
