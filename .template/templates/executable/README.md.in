@@ -44,6 +44,11 @@ Custom presets must use the same triplet and `VCPKG_INSTALLED_DIR` as setup.
 
 GitHub Actions builds this project on macOS and Windows using the same setup
 and development presets. Its workflow is independent of `.template/`.
+The `Required validation` check must pass for `main` and pull requests targeting
+`main`; failures on other branches produce warnings. If this repository retains
+`.github/rulesets/protect-main.json`, import it in GitHub Settings → Rules →
+Rulesets to enforce this check before merging. Tracking the file alone does not
+activate branch protection.
 
 ## Finishing generation
 

@@ -1,0 +1,6 @@
+#!/bin/sh
+# Automatic merge commits need the same staged-tree checks as ordinary commits.
+set -eu
+
+repository_root=$(git rev-parse --show-toplevel)
+exec "$repository_root/.github/hooks/pre-commit"

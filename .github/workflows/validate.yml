@@ -1,15 +1,26 @@
 name: Validate C++ template
+
 on:
   push:
   pull_request:
+  merge_group:
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
-  integration:
+  validation:
+    name: Template checks (${{ matrix.os }})
+    # Feature branches receive diagnostics; main and PRs targeting main must pass.
+    continue-on-error: ${{ !(github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event.merge_group.base_ref == 'refs/heads/main') }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,5 +28,30 @@ jobs:
           python-version: '3.x'
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
-      - name: Scaffold, repeat setup, run, test, install and consume
+      - name: Scaffold, build, test, install, and consume
         run: python .github/validate.py --integration
+      - name: Warn about failed validation
+        if: failure()
+        run: echo "::warning::Template validation failed. Fix failures before merging into main."
+
+  required-validation:
+    # Keep this name stable: the main ruleset requires this exact status check.
+    name: Required validation
+    if: always()
+    needs: validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Enforce main branch validation
+        env:
+          VALIDATION_RESULT: ${{ needs.validation.result }}
+          REQUIRE_SUCCESS: ${{ github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event.merge_group.base_ref == 'refs/heads/main' }}
+        run: |
+          if [ "$VALIDATION_RESULT" != success ]; then
+            if [ "$REQUIRE_SUCCESS" = true ]; then
+              echo "::error::All platform validation jobs must pass before merging into main."
+              exit 1
+            fi
+            echo "::warning::Validation failed on a development branch; continuing."
+          fi

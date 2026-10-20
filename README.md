@@ -62,4 +62,41 @@ python3 .github/validate.py --integration
 The integration mode uses real upstream vcpkg and fmt and requires network
 access. GitHub Actions runs it on macOS and Windows, including installed static
 and shared library consumers. Scaffold-only validation requires just Python
-and CMake.
+and CMake; hook tests also require Git. Validation uses disposable copies and
+never regenerates the project in your working directory.
+
+## Commit and merge validation
+
+Enable the tracked hooks once in each clone:
+
+```sh
+python3 .github/install-hooks.py
+```
+
+Use `python` on Windows. The installer sets the clone's local `core.hooksPath`
+to `.github/hooks`; it leaves an existing custom local hook path alone. Hooks
+prefer Python from `.venv/`, then fall back to Python on `PATH`.
+
+Every commit and automatic merge commit runs the fast suite against a disposable
+copy of the **Git index**, including partially staged changes. A validation
+failure blocks commits to `main`. Other branches print a warning and allow the
+commit. Missing validation files or tools follow the same policy. The fast suite
+checks generation, replacement safety, setup failures, and Git hook behavior.
+Real dependency builds run in CI, or locally with `--integration`.
+
+GitHub Actions runs the full suite on macOS and Windows for pushes, pull requests,
+and merge queues. Failures block the `Required validation` check for `main` and
+pull requests targeting `main`; other branches receive warnings. Generated
+projects keep that same check name and validate their own builds and tests.
+
+Import [the main branch ruleset](.github/rulesets/protect-main.json) in GitHub
+under **Settings → Rules → Rulesets → New ruleset → Import a ruleset**. Tracking
+the JSON does not activate it; import it for this repository and any new repository
+created from the template. It requires pull requests and an up-to-date successful
+`Required validation` check, blocks deletion and force pushes, and has no bypass
+actors or mandatory review approvals. See [GitHub's ruleset import documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/managing-rulesets-for-a-repository).
+
+Local hooks can be bypassed with `--no-verify` and do not run for fast-forward
+merges. The GitHub ruleset supplies the server-side merge requirement. See
+[Git's hook documentation](https://git-scm.com/docs/githooks) and
+[GitHub's required-check documentation](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks).

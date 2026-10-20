@@ -1,15 +1,25 @@
 name: Build C++ project
+
 on:
   push:
   pull_request:
+  merge_group:
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   build:
+    name: Project checks (${{ matrix.os }})
+    continue-on-error: ${{ !(github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event.merge_group.base_ref == 'refs/heads/main') }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
@@ -25,3 +35,28 @@ jobs:
       - name: Run library tests
         if: ${{ '@PROJECT_TYPE@' == 'library' }}
         run: ctest --preset debug
+      - name: Warn about failed validation
+        if: failure()
+        run: echo "::warning::Project validation failed. Fix failures before merging into main."
+
+  required-validation:
+    # Preserve the required check when this workflow replaces template validation.
+    name: Required validation
+    if: always()
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Enforce main branch validation
+        env:
+          VALIDATION_RESULT: ${{ needs.build.result }}
+          REQUIRE_SUCCESS: ${{ github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event.merge_group.base_ref == 'refs/heads/main' }}
+        run: |
+          if [ "$VALIDATION_RESULT" != success ]; then
+            if [ "$REQUIRE_SUCCESS" = true ]; then
+              echo "::error::All platform build jobs must pass before merging into main."
+              exit 1
+            fi
+            echo "::warning::Validation failed on a development branch; continuing."
+          fi

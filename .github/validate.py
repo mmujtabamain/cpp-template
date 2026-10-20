@@ -5,6 +5,7 @@ import argparse
 import unittest
 
 from validation.integration_tests import IntegrationTests
+from validation.hook_tests import GitHookTests
 from validation.scaffold_tests import (
     DevelopmentScriptTests,
     ScaffoldGenerationTests,
@@ -22,6 +23,7 @@ class ValidationApplication:
             ScaffoldGenerationTests,
             ScaffoldSafetyTests,
             DevelopmentScriptTests,
+            GitHookTests,
         ]
         if integration:
             test_classes.append(IntegrationTests)
