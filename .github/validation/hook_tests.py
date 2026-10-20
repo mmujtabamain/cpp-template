@@ -61,6 +61,21 @@ class GitHookTests(unittest.TestCase):
         self.git("switch", "-c", "feature")
         self.git("commit", "--allow-empty", "-m", "Validate feature")
 
+    def test_main_commits_require_integration_and_feature_commits_use_fast_suite(self):
+        validation_script = self.project / ".github/validate.py"
+        validation_script.write_text(
+            "import sys\n" "raise SystemExit(0 if '--integration' in sys.argv else 1)\n"
+        )
+        self.git("add", ".github/validate.py")
+        self.git("commit", "-m", "Require full validation on main")
+
+        self.git("switch", "-c", "feature")
+        result = self.git(
+            "commit", "--allow-empty", "-m", "Run fast validation on feature"
+        )
+        self.assertIn("WARNING", result.stdout)
+        self.assertIn("commit allowed", result.stdout)
+
     def test_invalid_main_commit_is_blocked(self):
         original_head = self.git("rev-parse", "HEAD").stdout
         self.stage_invalid_template()

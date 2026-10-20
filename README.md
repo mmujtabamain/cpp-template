@@ -77,12 +77,14 @@ Use `python` on Windows. The installer sets the clone's local `core.hooksPath`
 to `.github/hooks`; it leaves an existing custom local hook path alone. Hooks
 prefer Python from `.venv/`, then fall back to Python on `PATH`.
 
-Every commit and automatic merge commit runs the fast suite against a disposable
-copy of the **Git index**, including partially staged changes. A validation
-failure blocks commits to `main`. Other branches print a warning and allow the
-commit. Missing validation files or tools follow the same policy. The fast suite
-checks generation, replacement safety, setup failures, and Git hook behavior.
-Real dependency builds run in CI, or locally with `--integration`.
+Every commit and automatic merge commit validates a disposable copy of the
+**Git index**, including partially staged changes. On `main`, hooks run the full
+suite with `--integration`: failures block the commit, and real vcpkg/fmt builds
+require network access and the build prerequisites above. Other branches run the
+fast suite; failures print a warning and allow the commit. Missing validation
+files or tools follow the same policy. The fast suite checks generation,
+replacement safety, setup failures, and Git hook behavior. Run `--integration`
+manually to check real dependency builds on any branch.
 
 GitHub Actions runs the full suite on macOS and Windows for pushes, pull requests,
 and merge queues. Failures block the `Required validation` check for `main` and

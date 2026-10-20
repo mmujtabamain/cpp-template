@@ -44,7 +44,7 @@ class GitRepository:
 class StagedValidator:
     """Execute validation from an isolated snapshot using the current Python."""
 
-    def validate(self, snapshot):
+    def validate(self, snapshot, *, integration=False):
         if not (snapshot / ".template").is_dir():
             # Generated projects can remove the template machinery entirely.
             if (snapshot / "CMakeLists.txt").is_file():
@@ -66,8 +66,12 @@ class StagedValidator:
             for name, value in os.environ.items()
             if not name.startswith("GIT_")
         }
+        arguments = [sys.executable, str(validation_script)]
+        if integration:
+            arguments.append("--integration")
+
         result = subprocess.run(
-            [sys.executable, str(validation_script)],
+            arguments,
             cwd=snapshot,
             env=environment,
             check=False,
@@ -95,7 +99,11 @@ class CommitValidation:
             with tempfile.TemporaryDirectory(prefix="cpp-template-index-") as directory:
                 snapshot = Path(directory)
                 self.repository.export_index(snapshot)
-                validation_status = self.validator.validate(snapshot)
+                # main commits must prove generated projects actually build;
+                # development branches use the fast suite for early feedback.
+                validation_status = self.validator.validate(
+                    snapshot, integration=branch == "main"
+                )
         except (OSError, RuntimeError, subprocess.SubprocessError) as error:
             print(f"Validation could not complete: {error}", file=sys.stderr)
             validation_status = 1
