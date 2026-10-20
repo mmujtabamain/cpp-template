@@ -1,12 +1,5 @@
+# build
 /build/
-/external/vcpkg/
-/vcpkg_installed/
-/.template/.scaffold-tmp/
-/.template/.scaffolding
-/CMakeUserPresets.json
-.DS_Store
-*.o
-*.obj
 *.pdb
 *.exe
 *.dll
@@ -14,5 +7,23 @@
 *.so
 *.a
 *.lib
+*.o
+*.obj
+
+# cmake
+/CMakeUserPresets.json
+
+# scaffolding
+/.template/.scaffold-tmp/
+/.template/.scaffolding
+
+# vcpkg
+/external/vcpkg/
+/vcpkg_installed/
+
+# python
 __pycache__/
 /.venv/
+
+# OS
+.DS_Store

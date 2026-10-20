@@ -1,8 +1,9 @@
+# auto line ending for all files
 * text=auto
 
-# Git runs hooks through a POSIX shell on macOS and Windows.
+# use only "lf" for shell scripts and githooks
 *.sh text eol=lf
 .github/hooks/* text eol=lf
 
-# Native Windows launchers use Windows line endings after checkout.
+# bat files should have Windows' CRLF ending
 *.bat text eol=crlf
