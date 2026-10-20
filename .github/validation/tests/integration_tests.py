@@ -20,19 +20,26 @@ class IntegrationTests(unittest.TestCase):
             prefix="cpp-template-integration-"
         ) as directory:
             workspace = Path(directory)
-            project, vcpkg_directory = self._validate_executable(workspace)
+            scaffold_source = ProjectWorkspace().create(workspace, "scaffold source")
+            source_contents = ProjectWorkspace.snapshot(scaffold_source)
+            project, vcpkg_directory = self._validate_executable(
+                workspace, scaffold_source
+            )
             library_project, dependency_prefix = self._validate_library(
-                workspace, project, vcpkg_directory
+                workspace, scaffold_source, project, vcpkg_directory
             )
             self._validate_subdirectory_consumer(
                 workspace, library_project, dependency_prefix
             )
+            self.assertEqual(
+                ProjectWorkspace.snapshot(scaffold_source), source_contents
+            )
 
     # MARK: Executable setup, sources, assets, and configurations
 
-    def _validate_executable(self, workspace):
-        project = ProjectWorkspace().create(workspace, "integration executable")
-        scaffold(project, "SampleRuntime", "exec")
+    def _validate_executable(self, workspace, scaffold_source):
+        project = workspace / "integration executable"
+        scaffold(scaffold_source, "SampleRuntime", "exec", destination=project)
         print(
             "Integration: first setup (clone/bootstrap/install/configure)", flush=True
         )
@@ -107,9 +114,11 @@ class IntegrationTests(unittest.TestCase):
 
     # MARK: Static/shared exports and installed consumers
 
-    def _validate_library(self, workspace, project, vcpkg_directory):
-        library_project = ProjectWorkspace().create(workspace, "integration library")
-        scaffold(library_project, "Sample Library", "library")
+    def _validate_library(self, workspace, scaffold_source, project, vcpkg_directory):
+        library_project = workspace / "integration library"
+        scaffold(
+            scaffold_source, "Sample Library", "library", destination=library_project
+        )
         (library_project / "external").mkdir()
         shutil.move(vcpkg_directory, library_project / "external/vcpkg")
         shutil.copytree(
@@ -292,9 +301,8 @@ class IntegrationTests(unittest.TestCase):
         CommandRunner.run(
             ["cmake", "--build", consumer_project / "build"], consumer_project
         )
-        # Removing template machinery must leave the generated project fully usable.
-        shutil.rmtree(library_project / ".template")
-        (library_project / "scaffold.sh").unlink()
-        (library_project / "scaffold.bat").unlink()
+        # external projects must build without copies of the scaffold machinery
+        for path in (".scaffold", "scaffold-here.sh", "scaffold-here.bat"):
+            self.assertFalse((library_project / path).exists())
         launcher(library_project, "run")
         print("Integration checks passed", flush=True)

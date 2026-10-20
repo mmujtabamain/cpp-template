@@ -1,0 +1,9 @@
+# auto line ending for all files
+* text=auto
+
+# use only "lf" for shell scripts and githooks
+*.sh text eol=lf
+.github/hooks/* text eol=lf
+
+# bat files should have Windows' CRLF ending
+*.bat text eol=crlf

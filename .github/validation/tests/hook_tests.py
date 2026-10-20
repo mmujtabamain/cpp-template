@@ -20,11 +20,11 @@ class GitHookTests(unittest.TestCase):
         self.project = ProjectWorkspace().create(
             Path(temporary_directory.name), "repository with spaces"
         )
-        self.marker = self.project / ".template/validation-marker"
+        self.marker = self.project / ".scaffold/validation-marker"
         self.marker.write_text("valid")
         (self.project / ".github/validate.py").write_text(
             "from pathlib import Path\n"
-            "raise SystemExit(0 if Path('.template/validation-marker').read_text() == 'valid' else 1)\n"
+            "raise SystemExit(0 if Path('.scaffold/validation-marker').read_text() == 'valid' else 1)\n"
         )
         # Isolate these repositories from Git's hook-specific index and config.
         self.environment = {
@@ -54,7 +54,7 @@ class GitHookTests(unittest.TestCase):
 
     def stage_invalid_template(self):
         self.marker.write_text("invalid")
-        self.git("add", ".template/validation-marker")
+        self.git("add", ".scaffold/validation-marker")
 
     # MARK: Commit status and index isolation
 
@@ -108,7 +108,7 @@ class GitHookTests(unittest.TestCase):
         self.git("commit", "-m", "Reject staged failure", success=False)
         self.assertEqual(self.marker.read_text(), "valid")
         self.assertEqual(
-            self.git("show", ":.template/validation-marker").stdout, "invalid"
+            self.git("show", ":.scaffold/validation-marker").stdout, "invalid"
         )
 
     def test_unstaged_failure_does_not_block_valid_commit(self):
@@ -124,10 +124,10 @@ class GitHookTests(unittest.TestCase):
             "commit", "--only", "-m", "Commit documentation only", "--", "README.md"
         )
         self.assertEqual(
-            self.git("show", "HEAD:.template/validation-marker").stdout, "valid"
+            self.git("show", "HEAD:.scaffold/validation-marker").stdout, "valid"
         )
         self.assertEqual(
-            self.git("show", ":.template/validation-marker").stdout, "invalid"
+            self.git("show", ":.scaffold/validation-marker").stdout, "invalid"
         )
 
     def test_missing_staged_validator_blocks_main(self):
@@ -136,14 +136,14 @@ class GitHookTests(unittest.TestCase):
         self.assertIn("staged .github/validate.py is missing", result.stdout)
 
     def test_generated_project_can_remove_template_sources(self):
-        self.git("rm", "-r", ".template")
+        self.git("rm", "-r", ".scaffold")
         (self.project / "CMakeLists.txt").write_text("# Generated project\n")
         self.git("add", "CMakeLists.txt")
         result = self.git("commit", "-m", "Finish project generation")
         self.assertIn("generated-project CI handles builds", result.stdout)
 
     def test_missing_template_sources_block_unscaffolded_repository(self):
-        self.git("rm", "-r", ".template")
+        self.git("rm", "-r", ".scaffold")
         result = self.git("commit", "-m", "Reject missing sources", success=False)
         self.assertIn("Staged template sources are missing", result.stdout)
 

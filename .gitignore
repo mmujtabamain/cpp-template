@@ -14,8 +14,8 @@
 /CMakeUserPresets.json
 
 # scaffolding
-/.template/.scaffold-tmp/
-/.template/.scaffolding
+/.scaffold/.scaffold-tmp/
+/.scaffold/.scaffolding
 
 # vcpkg
 /external/vcpkg/

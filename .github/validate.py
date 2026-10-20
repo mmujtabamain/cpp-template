@@ -6,6 +6,8 @@ import unittest
 
 from validation.tests.scaffold_gen_tests import ScaffoldGenerationTests
 from validation.tests.scaffold_safety_tests import ScaffoldSafetyTests
+from validation.tests.scaffold_location_tests import ScaffoldLocationTests
+from validation.tests.scaffold_git_tests import ScaffoldGitTests
 from validation.tests.dev_script_tests import DevelopmentScriptTests
 from validation.tests.hook_tests import GitHookTests
 from validation.tests.integration_tests import IntegrationTests
@@ -18,6 +20,8 @@ class ValidationApplication:
         test_classes = [
             ScaffoldGenerationTests,
             ScaffoldSafetyTests,
+            ScaffoldLocationTests,
+            ScaffoldGitTests,
             DevelopmentScriptTests,
             GitHookTests,
         ]

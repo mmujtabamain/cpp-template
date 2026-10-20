@@ -40,7 +40,7 @@ class StagedValidator:
     """Execute validation from an isolated snapshot using the current Python."""
 
     def validate(self, snapshot, *, integration=False):
-        if not (snapshot / ".template").is_dir():
+        if not (snapshot / ".scaffold").is_dir():
             # Generated projects can remove the template machinery entirely.
             if (snapshot / "CMakeLists.txt").is_file():
                 print(

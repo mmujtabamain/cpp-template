@@ -42,21 +42,56 @@ sudo apt install build-essential cmake ninja-build git python3 curl zip unzip ta
 
 > On Windows, use the corresponding `*.bat` scripts and `python` instead of `python3`.
 
-Run `scaffold.sh` with a project name and type: `exec` for executable programs or `library` for libraries. Use `--force` to overwrite an existing generated project without confirmation.
+Run `scaffold-here.sh` with a project name and type: `exec` for executable programs or `library` for libraries. Use `--force` to overwrite an existing generated project without confirmation.
 
 ```sh
-./scaffold.sh "Sample Project" exec
+./scaffold-here.sh "SampleRuntime" exec
+
+# or generate into a different directory
+./.scaffold/scaffold.sh "../Sample Library" "Sample Library" library
 ```
 
 > Names must start with an ASCII letter and contain only letters, digits, spaces, underscores, or hyphens; reserved identifiers are rejected. Other naming forms, such as `sample-project`, `SampleProject`, and `sample_project`, are derived automatically.
 
-After scaffolding, you **MUST** manually remove `.template/`, `scaffold.sh`, and `scaffold.bat`.
+Templates and launchers stay in `.scaffold/` for reuse. An external destination receives only the generated project. `scaffold-here.sh` always targets this repository's root, even when called from another directory.
 
 Run `setup.sh` afterwards to complete the setup.
 
+## Git
+
+| Option | Effect |
+| --- | --- |
+| `--git` | Generate GitHub CI, the main ruleset, `.gitignore`, and `.gitattributes` (default). |
+| `--no-git` | Omit Git configuration and CI files. |
+| `--keep-git` | Keep existing `.git` metadata without prompting. |
+| `--remove-git` | Remove only the destination's `.git` metadata without prompting. |
+
+Scaffolding removes the destination's existing top-level `.git*` files and directories, except `.git`, before installing the selected template's Git files. This removes template hooks and validation scripts from the generated project. `.scaffold/` stays intact. Unrelated files and `external/vcpkg/` are kept.
+
+If `.git` exists, scaffolding asks whether to remove it; the default is **no**. `--force` only confirms replacement of generated files and does not approve Git-history removal. Git history and remotes remain unchanged when kept; the template's `core.hooksPath` setting is cleared so deleted hooks do not block commits. Custom hook settings are preserved.
+
+```sh
+# generate without Git files, keeping any existing history
+./scaffold-here.sh "SampleRuntime" exec --no-git --keep-git
+
+# generate externally and explicitly remove that destination's old history
+./.scaffold/scaffold.sh "../Sample Library" "Sample Library" library --git --remove-git
+```
+
+The scaffolder and generated README print commands for `git init`, local identity, the first commit, and remote setup. Git is still required by setup to acquire vcpkg, even with `--no-git`.
+
 ## Commit and merge validation
 
-Enable the tracked hooks once in each clone:
+These checks maintain the template. Generated projects receive their own build workflow when Git is enabled.
+
+```sh
+python3 .github/validate.py
+python3 .github/validate.py --full
+```
+
+`--full` also builds with real vcpkg/fmt, tests static and shared libraries, and checks installed consumers. It requires network access. Commits to `main` run the full suite and block on failure; other branches run fast checks and allow commits with warnings.
+
+Enable the tracked hooks once in each template clone:
 
 ```sh
 python3 .github/install-hooks.py

@@ -61,11 +61,11 @@ class ScaffoldGenerationTests(ScaffoldFixture):
                     self.assertIn(display_name, (project / "README.md").read_text())
                     CommandRunner.run(["cmake", "--list-presets"], project)
                     workflow = (project / ".github/workflows/validate.yml").read_text()
-                    self.assertNotIn(".template/", workflow)
+                    self.assertNotIn(".scaffold/", workflow)
                     self.assertNotIn("@PROJECT_TYPE@", workflow)
                     self.assertIn(f"'{project_type}' == 'library'", workflow)
                     self.assertFalse((project / ".cpp-template-scaffolded").exists())
-                    self.assertFalse((project / ".template/.scaffold-tmp").exists())
+                    self.assertFalse((project / ".scaffold/.scaffold-tmp").exists())
                     if project_type == "library":
                         header = project / f"include/{namespace}/{namespace}.hpp"
                         self.assertIn(f"namespace {namespace}", header.read_text())

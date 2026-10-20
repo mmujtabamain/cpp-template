@@ -47,15 +47,15 @@ class ProjectWorkspace:
     def create(self, workspace, name):
         project = workspace / name
         project.mkdir()
-        for directory in (".template", ".github"):
+        for directory in (".scaffold", ".github"):
             shutil.copytree(
                 self.repository_root / directory,
                 project / directory,
                 ignore=shutil.ignore_patterns(".scaffold-tmp", "__pycache__"),
             )
         for filename in (
-            "scaffold.sh",
-            "scaffold.bat",
+            "scaffold-here.sh",
+            "scaffold-here.bat",
             "README.md",
             ".gitignore",
             ".gitattributes",
@@ -97,17 +97,23 @@ def scaffold(
     force=False,
     answer="",
     success=True,
+    destination=None,
+    git=True,
+    remove_git="OFF",
 ) -> subprocess.CompletedProcess:
     """Exercise shared CMake validation and destructive-replacement confirmation."""
     arguments = [
         "cmake",
+        f"-DSCAFFOLD_DESTINATION={destination or project}",
+        f"-DSCAFFOLD_GIT={'ON' if git else 'OFF'}",
+        f"-DSCAFFOLD_REMOVE_GIT={remove_git}",
         f"-DPROJECT_DISPLAY_NAME={name}",
         f"-DPROJECT_TYPE={project_type}",
     ]
     if force:
         arguments.append("-DSCAFFOLD_FORCE=ON")
     return CommandRunner.run(
-        arguments + ["-P", project / ".template/scripts/scaffold.cmake"],
+        arguments + ["-P", project / ".scaffold/scripts/scaffold.cmake"],
         project,
         input=answer,
         success=success,
@@ -116,6 +122,8 @@ def scaffold(
 
 def launcher(project, name, *arguments, input="") -> subprocess.CompletedProcess:
     """Exercise the native shell or Batch entry point on this host."""
+    if name == "scaffold":
+        name = "scaffold-here"
     if IS_WINDOWS:
         invocation = ["cmd", "/c", str(project / (name + ".bat")), *arguments]
     else:

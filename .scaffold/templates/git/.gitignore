@@ -1,0 +1,29 @@
+# build
+/build/
+*.pdb
+*.exe
+*.dll
+*.dylib
+*.so
+*.a
+*.lib
+*.o
+*.obj
+
+# cmake
+/CMakeUserPresets.json
+
+# scaffolding
+/.scaffold/.scaffold-tmp/
+/.scaffold/.scaffolding
+
+# vcpkg
+/external/vcpkg/
+/vcpkg_installed/
+
+# python
+__pycache__/
+/.venv/
+
+# OS
+.DS_Store

@@ -1,12 +1,55 @@
-# Shared one-time generator for the shell and Batch launchers.
+# Shared project generator for the shell and Batch launchers.
 # Render and validate in staging before allowing destructive replacement.
 
 # MARK: Paths and input validation
 
 cmake_minimum_required(VERSION 3.24)
-get_filename_component(PROJECT_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
-set(TEMPLATE_DIRECTORY "${PROJECT_ROOT}/.template/templates")
-set(STAGING_DIRECTORY "${PROJECT_ROOT}/.template/.scaffold-tmp")
+include("${CMAKE_CURRENT_LIST_DIR}/prompt.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/git.cmake")
+get_filename_component(SCAFFOLD_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+set(TEMPLATE_DIRECTORY "${SCAFFOLD_ROOT}/templates")
+set(STAGING_DIRECTORY "${SCAFFOLD_ROOT}/.scaffold-tmp")
+
+# require a destination; relative paths use the caller's working directory
+if(NOT DEFINED SCAFFOLD_DESTINATION OR SCAFFOLD_DESTINATION STREQUAL "")
+    message(FATAL_ERROR "Supply SCAFFOLD_DESTINATION: the directory to scaffold into.")
+endif()
+if(SCAFFOLD_DESTINATION MATCHES "[;\r\n]")
+    message(FATAL_ERROR "Scaffold location cannot contain semicolons or newlines.")
+endif()
+get_filename_component(PROJECT_ROOT "${SCAFFOLD_DESTINATION}" ABSOLUTE)
+file(REAL_PATH "${PROJECT_ROOT}" PROJECT_ROOT)
+file(REAL_PATH "${SCAFFOLD_ROOT}" SCAFFOLD_ROOT)
+cmake_path(IS_PREFIX SCAFFOLD_ROOT "${PROJECT_ROOT}" NORMALIZE DESTINATION_IN_SCAFFOLD)
+get_filename_component(DESTINATION_PARENT "${PROJECT_ROOT}" DIRECTORY)
+if(DESTINATION_IN_SCAFFOLD OR PROJECT_ROOT STREQUAL DESTINATION_PARENT)
+    message(FATAL_ERROR "Choose a project location outside .scaffold and filesystem roots.")
+endif()
+if(EXISTS "${PROJECT_ROOT}" AND NOT IS_DIRECTORY "${PROJECT_ROOT}")
+    message(FATAL_ERROR "Scaffold location must be a directory.")
+endif()
+
+# git files and existing history are separate choices
+if(NOT DEFINED SCAFFOLD_GIT)
+    set(SCAFFOLD_GIT ON)
+endif()
+if(NOT DEFINED SCAFFOLD_REMOVE_GIT)
+    set(SCAFFOLD_REMOVE_GIT ASK)
+endif()
+string(TOUPPER "${SCAFFOLD_GIT}" SCAFFOLD_GIT)
+string(TOUPPER "${SCAFFOLD_REMOVE_GIT}" SCAFFOLD_REMOVE_GIT)
+if(NOT SCAFFOLD_GIT MATCHES "^(ON|OFF)$")
+    message(FATAL_ERROR "SCAFFOLD_GIT must be ON or OFF.")
+endif()
+if(NOT SCAFFOLD_REMOVE_GIT MATCHES "^(ASK|ON|OFF)$")
+    message(FATAL_ERROR "SCAFFOLD_REMOVE_GIT must be ASK, ON, or OFF.")
+endif()
+
+if(SCAFFOLD_GIT)
+    file(READ "${TEMPLATE_DIRECTORY}/fragments/git-enabled.md" PROJECT_GIT_GUIDE)
+else()
+    file(READ "${TEMPLATE_DIRECTORY}/fragments/git-disabled.md" PROJECT_GIT_GUIDE)
+endif()
 
 # Validate every input before touching generated output or the previous staging tree.
 if(NOT DEFINED PROJECT_DISPLAY_NAME OR NOT DEFINED PROJECT_TYPE)
@@ -174,7 +217,11 @@ file(REMOVE_RECURSE "${STAGING_DIRECTORY}")
 file(MAKE_DIRECTORY "${STAGING_DIRECTORY}")
 
 # Render common development tools, then the selected project type.
-foreach(TEMPLATE_KIND common "${PROJECT_TYPE}")
+set(TEMPLATE_KINDS common "${PROJECT_TYPE}")
+if(SCAFFOLD_GIT)
+    list(APPEND TEMPLATE_KINDS git)
+endif()
+foreach(TEMPLATE_KIND IN LISTS TEMPLATE_KINDS)
     if(TEMPLATE_KIND STREQUAL "exec")
         set(TEMPLATE_KIND executable)
     endif()
@@ -250,6 +297,18 @@ foreach(
         )
     endif()
 endforeach()
+if(SCAFFOLD_GIT)
+    foreach(GIT_REQUIRED_PATH .github/workflows/validate.yml .github/rulesets/protect-main.json
+                              .gitignore .gitattributes
+    )
+        if(NOT EXISTS "${STAGING_DIRECTORY}/${GIT_REQUIRED_PATH}")
+            message(
+                FATAL_ERROR
+                    "Incomplete staged project: missing ${GIT_REQUIRED_PATH}. Existing project is untouched."
+            )
+        endif()
+    endforeach()
+endif()
 foreach(JSON_FILENAME CMakePresets.json vcpkg.json)
     file(READ "${STAGING_DIRECTORY}/${JSON_FILENAME}" JSON_CONTENT)
     string(JSON JSON_VALUE_TYPE ERROR_VARIABLE JSON_ERROR TYPE "${JSON_CONTENT}")
@@ -278,7 +337,7 @@ file(
 
 # MARK: Generated project detection
 
-# Only these reserved paths may be replaced; Git, tooling, and unrelated files survive.
+# generated project files are replaced; scaffold sources and unrelated files stay
 set(GENERATED_PATHS
     CMakeLists.txt
     CMakePresets.json
@@ -297,13 +356,11 @@ set(GENERATED_PATHS
     run.bat
     build
     vcpkg_installed
-    .github/workflows/validate.yml
 )
 set(HAS_GENERATED_PROJECT false)
 foreach(GENERATED_PATH IN LISTS GENERATED_PATHS)
-    # The template's README and validation workflow also exist before scaffolding.
+    # the template README also exists before scaffolding
     if(NOT GENERATED_PATH STREQUAL "README.md"
-       AND NOT GENERATED_PATH STREQUAL ".github/workflows/validate.yml"
        AND (EXISTS "${PROJECT_ROOT}/${GENERATED_PATH}" OR IS_SYMLINK
                                                           "${PROJECT_ROOT}/${GENERATED_PATH}")
     )
@@ -315,23 +372,11 @@ endforeach()
 
 # Ask only after a replacement is ready. EOF and any answer other than yes cancel.
 if(HAS_GENERATED_PROJECT AND NOT SCAFFOLD_FORCE)
-    message(
-        "An existing scaffolded project was detected.\n\nRe-scaffolding will permanently erase the existing generated project,\nincluding source files and changes made after scaffolding.\n\nContinue? [y/N]"
+    ask_yes_no(
+        "An existing scaffolded project was detected.\n\nRe-scaffolding will permanently erase the existing generated project,\nincluding source files and changes made after scaffolding.\n\nContinue?"
+        REPLACE_PROJECT
     )
-    if(CMAKE_HOST_WIN32)
-        execute_process(
-            COMMAND powershell -NoProfile -Command "[Console]::ReadLine()"
-            OUTPUT_VARIABLE REPLACEMENT_ANSWER RESULT_VARIABLE PROMPT_EXIT_CODE
-        )
-    else()
-        execute_process(
-            COMMAND sh -c "IFS= read -r answer; printf '%s' \"$answer\""
-            OUTPUT_VARIABLE REPLACEMENT_ANSWER RESULT_VARIABLE PROMPT_EXIT_CODE
-        )
-    endif()
-    string(STRIP "${REPLACEMENT_ANSWER}" REPLACEMENT_ANSWER)
-    string(TOLOWER "${REPLACEMENT_ANSWER}" REPLACEMENT_ANSWER)
-    if(NOT PROMPT_EXIT_CODE EQUAL 0 OR NOT REPLACEMENT_ANSWER MATCHES "^(y|yes)$")
+    if(NOT REPLACE_PROJECT)
         file(REMOVE_RECURSE "${STAGING_DIRECTORY}")
         message("Scaffolding cancelled. Existing project is unchanged.")
         return()
@@ -340,12 +385,22 @@ endif()
 
 # MARK: Replacement and completion
 
+# remove old Git files; only the selected template's Git files are installed
+clear_template_hooks("${PROJECT_ROOT}")
+file(GLOB OLD_GIT_PATHS RELATIVE "${PROJECT_ROOT}" "${PROJECT_ROOT}/.git*")
+list(REMOVE_ITEM OLD_GIT_PATHS .git)
+list(APPEND GENERATED_PATHS ${OLD_GIT_PATHS})
+
 # Only a fully rendered replacement reaches this destructive commit step.
 foreach(GENERATED_PATH IN LISTS GENERATED_PATHS)
-    file(REMOVE_RECURSE "${PROJECT_ROOT}/${GENERATED_PATH}")
+    if(IS_SYMLINK "${PROJECT_ROOT}/${GENERATED_PATH}")
+        file(REMOVE "${PROJECT_ROOT}/${GENERATED_PATH}")
+    else()
+        file(REMOVE_RECURSE "${PROJECT_ROOT}/${GENERATED_PATH}")
+    endif()
 endforeach()
 
-# Move individual files to preserve unrelated content in shared directories such as .github.
+# install staged files while leaving unrelated destination files alone
 file(
     GLOB_RECURSE GENERATED_RELATIVE_PATHS
     LIST_DIRECTORIES true
@@ -371,3 +426,4 @@ message(
         "Generated ${PROJECT_TYPE}: ${PROJECT_DISPLAY_NAME} (${PROJECT_NAME}, ${PROJECT_NAMESPACE}, ${PROJECT_MANIFEST_NAME})"
 )
 message(STATUS "Next: setup.sh / setup.bat, then run.sh / run.bat")
+finish_scaffold_git("${PROJECT_ROOT}" "${SCAFFOLD_REMOVE_GIT}" "${SCAFFOLD_GIT}")

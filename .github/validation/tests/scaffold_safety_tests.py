@@ -33,13 +33,13 @@ class ScaffoldSafetyTests(ScaffoldFixture):
         for path in (
             ".git/keep",
             "external/vcpkg/keep",
-            ".github/keep",
             "notes.txt",
-            ".template",
-            "scaffold.sh",
-            "scaffold.bat",
+            ".scaffold",
+            "scaffold-here.sh",
+            "scaffold-here.bat",
         ):
             self.assertTrue((self.project / path).exists(), path)
+        self.assertFalse((self.project / ".github/keep").exists())
         self.assertIn("Replacement", (self.project / "src/main.cpp").read_text())
 
     def test_invalid_input_preserves_existing_data(self):
@@ -54,7 +54,7 @@ class ScaffoldSafetyTests(ScaffoldFixture):
     def test_partial_output_and_stale_stage_recovery(self):
         (self.project / "src").mkdir()
         (self.project / "src/partial.cpp").write_text("partial")
-        staging_directory = self.project / ".template/.scaffold-tmp"
+        staging_directory = self.project / ".scaffold/.scaffold-tmp"
         staging_directory.mkdir()
         (staging_directory / "stale").write_text("stale")
         self.scaffold(force=True)
@@ -64,7 +64,7 @@ class ScaffoldSafetyTests(ScaffoldFixture):
 
     def test_render_error_preserves_existing_data(self):
         self.scaffold()
-        (self.project / ".template/templates/common/vcpkg.json.in").write_text(
+        (self.project / ".scaffold/templates/common/vcpkg.json.in").write_text(
             "{ broken json"
         )
         original_source = (self.project / "src/sample_library.cpp").read_bytes()
@@ -75,7 +75,7 @@ class ScaffoldSafetyTests(ScaffoldFixture):
 
     def test_missing_source_template_preserves_existing_data(self):
         self.scaffold()
-        (self.project / ".template/templates/executable/src/main.cpp.in").unlink()
+        (self.project / ".scaffold/templates/executable/src/main.cpp.in").unlink()
         original_source = (self.project / "src/sample_library.cpp").read_bytes()
         result = self.scaffold(project_type="exec", force=True, success=False)
         self.assertIn("missing src/main.cpp", result.stdout)
