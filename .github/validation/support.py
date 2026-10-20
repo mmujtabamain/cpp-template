@@ -59,7 +59,13 @@ class ProjectWorkspace:
                 project / directory,
                 ignore=shutil.ignore_patterns(".scaffold-tmp", "__pycache__"),
             )
-        for filename in ("scaffold.sh", "scaffold.bat", "README.md", ".gitignore"):
+        for filename in (
+            "scaffold.sh",
+            "scaffold.bat",
+            "README.md",
+            ".gitignore",
+            ".gitattributes",
+        ):
             shutil.copy2(self.repository_root / filename, project / filename)
         return project
 

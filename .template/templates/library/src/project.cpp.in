@@ -3,10 +3,12 @@
 
 namespace @PROJECT_NAMESPACE@
 {
-    int add(int a, int b)
+    int add(int left_value, int right_value)
     {
-        const int result = a + b;
-        fmt::print("{} + {} = {}\n", a, b, result);
-        return result;
+        const int sum = left_value + right_value;
+
+        fmt::print("{} + {} = {}\n", left_value, right_value, sum);
+
+        return sum;
     }
 }

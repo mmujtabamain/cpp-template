@@ -1,25 +1,44 @@
 # Executable project template; scaffold substitutes project names before configuration.
+
+# MARK: Project and dependencies
+
 cmake_minimum_required(VERSION 3.24)
 project(@PROJECT_NAME@ VERSION 0.1.0 LANGUAGES CXX)
 find_package(fmt CONFIG REQUIRED)
+
+# MARK: Source discovery and executable target
+
 # Discover nested implementation files and reconfigure when files are added or removed.
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 add_executable(@PROJECT_NAME@ ${PROJECT_SOURCES})
 target_compile_features(@PROJECT_NAME@ PRIVATE cxx_std_23)
 set_target_properties(@PROJECT_NAME@ PROPERTIES CXX_EXTENSIONS OFF)
+
 # Keep includes relative to src/, for example "util/strings.hpp".
 target_include_directories(@PROJECT_NAME@ PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(@PROJECT_NAME@ PRIVATE fmt::fmt)
+
+# MARK: Runtime assets
+
 # Copy assets beside the actual binary for both single- and multi-config generators.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
-    add_custom_command(TARGET @PROJECT_NAME@ POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_directory
-            "${CMAKE_CURRENT_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:@PROJECT_NAME@>/assets"
-        COMMENT "Copying assets beside the executable" VERBATIM)
+    add_custom_command(
+        TARGET @PROJECT_NAME@
+        POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+                "$<TARGET_FILE_DIR:@PROJECT_NAME@>/assets"
+        COMMENT "Copying assets beside the executable"
+        VERBATIM
+    )
 endif()
+
+# MARK: Development run target
+
 # Let CMake locate and launch the built application from its asset directory.
-add_custom_target(run
+add_custom_target(
+    run
     COMMAND $<TARGET_FILE:@PROJECT_NAME@>
     DEPENDS @PROJECT_NAME@
     WORKING_DIRECTORY "$<TARGET_FILE_DIR:@PROJECT_NAME@>"
-    USES_TERMINAL VERBATIM)
+    USES_TERMINAL VERBATIM
+)

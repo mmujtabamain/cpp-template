@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+from textwrap import dedent
 import unittest
 
 from .support import IS_WINDOWS, command, fresh, launcher, scaffold
@@ -37,7 +38,7 @@ class IntegrationTests(unittest.TestCase):
         )
         launcher(project, "setup")
         vcpkg_directory = project / "external/vcpkg"
-        self.assertTrue(not (vcpkg_directory / ".git").exists())
+        self.assertFalse((vcpkg_directory / ".git").exists())
         vcpkg_executable = vcpkg_directory / ("vcpkg.exe" if IS_WINDOWS else "vcpkg")
         executable_identity = (
             vcpkg_executable.stat().st_mtime_ns,
@@ -48,11 +49,11 @@ class IntegrationTests(unittest.TestCase):
         (project / "build/keep").write_text("build survives setup")
         print("Integration: repeated setup and executable run", flush=True)
         launcher(project, "setup")
-        self.assertTrue(
-            executable_identity
-            == (vcpkg_executable.stat().st_mtime_ns, vcpkg_executable.stat().st_size)
+        self.assertEqual(
+            executable_identity,
+            (vcpkg_executable.stat().st_mtime_ns, vcpkg_executable.stat().st_size),
         )
-        self.assertTrue(reuse_marker.read_text() == "keep")
+        self.assertEqual(reuse_marker.read_text(), "keep")
         self.assertTrue((project / "build/keep").exists())
         (project / "assets/check.txt").write_text("copied asset")
         (project / "src/util").mkdir()
@@ -66,9 +67,9 @@ class IntegrationTests(unittest.TestCase):
             )
         )
         result = launcher(project, "run")
-        self.assertTrue("Hello from SampleRuntime!" in result.stdout)
-        self.assertTrue(
-            (project / "build/debug/assets/check.txt").read_text() == "copied asset"
+        self.assertIn("Hello from SampleRuntime!", result.stdout)
+        self.assertEqual(
+            (project / "build/debug/assets/check.txt").read_text(), "copied asset"
         )
         launcher(project, "setup", "release")
         launcher(project, "run", "release")
@@ -123,10 +124,18 @@ class IntegrationTests(unittest.TestCase):
         library_vcpkg_executable.unlink()
         launcher(library_project, "setup")
         self.assertTrue(library_vcpkg_executable.exists())
-        self.assertTrue(
-            (library_project / "external/vcpkg/reuse-marker").read_text() == "keep"
+        self.assertEqual(
+            (library_project / "external/vcpkg/reuse-marker").read_text(), "keep"
         )
         launcher(library_project, "setup")
+        dependency_prefixes = [
+            dependency_path
+            for dependency_path in (library_project / "vcpkg_installed").iterdir()
+            if (dependency_path / "share/fmt").exists()
+        ]
+        self.assertEqual(len(dependency_prefixes), 1, dependency_prefixes)
+        dependency_prefix = dependency_prefixes[0]
+
         for build_shared_library in (False, True):
             library_kind = "shared" if build_shared_library else "static"
             print(
@@ -164,71 +173,84 @@ class IntegrationTests(unittest.TestCase):
             self.assertTrue(
                 list(install_prefix.rglob("SampleLibraryConfigVersion.cmake"))
             )
-            consumer = workspace / f"consumer-{library_kind}"
-            consumer.mkdir()
-            (consumer / "main.cpp").write_text(
-                "#include <sample_library/sample_library.hpp>\nint main() { return sample_library::add(2, 3) == 5 ? 0 : 1; }\n"
+            self._validate_installed_consumer(
+                workspace,
+                library_project,
+                install_prefix,
+                dependency_prefix,
+                library_kind,
             )
-            (consumer / "CMakeLists.txt").write_text(
-                """cmake_minimum_required(VERSION 3.24)
-        project(Consumer LANGUAGES CXX)
-        find_package(SampleLibrary 0.1 CONFIG REQUIRED)
-        add_executable(consumer main.cpp)
-        target_link_libraries(consumer PRIVATE SampleLibrary::SampleLibrary)
-        """
-            )
-            dependency_prefixes = [
-                dependency_path
-                for dependency_path in (library_project / "vcpkg_installed").iterdir()
-                if (dependency_path / "share/fmt").exists()
-            ]
-            self.assertTrue(len(dependency_prefixes) == 1, dependency_prefixes)
-            # Hide original public/private sources: the installed package must suffice.
-            for directory in ("src", "include"):
-                (library_project / directory).rename(
-                    library_project / (directory + "-hidden")
-                )
-            try:
-                command(
-                    [
-                        "cmake",
-                        "-S",
-                        consumer,
-                        "-B",
-                        consumer / "build",
-                        "-G",
-                        "Ninja",
-                        "-DCMAKE_BUILD_TYPE=Debug",
-                        f"-DCMAKE_PREFIX_PATH={install_prefix};{dependency_prefixes[0]}",
-                    ],
-                    consumer,
-                )
-                command(["cmake", "--build", consumer / "build"], consumer)
-                environment = os.environ.copy()
-                environment["PATH"] = os.pathsep.join(
-                    [
-                        str(install_prefix / "bin"),
-                        str(dependency_prefixes[0] / "debug/bin"),
-                        str(dependency_prefixes[0] / "bin"),
-                        environment.get("PATH", ""),
-                    ]
-                )
-                command(
-                    [
-                        consumer
-                        / "build"
-                        / ("consumer.exe" if IS_WINDOWS else "consumer")
-                    ],
-                    consumer,
-                    environment=environment,
-                )
-            finally:
-                for directory in ("src", "include"):
-                    (library_project / (directory + "-hidden")).rename(
-                        library_project / directory
-                    )
 
-        return library_project, dependency_prefixes[0]
+        return library_project, dependency_prefix
+
+    # MARK: Independent installed-package consumer
+
+    def _validate_installed_consumer(
+        self,
+        workspace,
+        library_project,
+        install_prefix,
+        dependency_prefix,
+        library_kind,
+    ):
+        consumer = workspace / f"consumer-{library_kind}"
+        consumer.mkdir()
+        (consumer / "main.cpp").write_text(
+            "#include <sample_library/sample_library.hpp>\n\n"
+            "int main()\n"
+            "{\n"
+            "    return sample_library::add(2, 3) == 5 ? 0 : 1;\n"
+            "}\n"
+        )
+        (consumer / "CMakeLists.txt").write_text(dedent("""\
+                cmake_minimum_required(VERSION 3.24)
+                project(Consumer LANGUAGES CXX)
+
+                find_package(SampleLibrary 0.1 CONFIG REQUIRED)
+
+                add_executable(consumer main.cpp)
+                target_link_libraries(consumer PRIVATE SampleLibrary::SampleLibrary)
+                """))
+        # Hide original public/private sources: the installed package must suffice.
+        for directory in ("src", "include"):
+            (library_project / directory).rename(
+                library_project / (directory + "-hidden")
+            )
+        try:
+            command(
+                [
+                    "cmake",
+                    "-S",
+                    consumer,
+                    "-B",
+                    consumer / "build",
+                    "-G",
+                    "Ninja",
+                    "-DCMAKE_BUILD_TYPE=Debug",
+                    f"-DCMAKE_PREFIX_PATH={install_prefix};{dependency_prefix}",
+                ],
+                consumer,
+            )
+            command(["cmake", "--build", consumer / "build"], consumer)
+            environment = os.environ.copy()
+            environment["PATH"] = os.pathsep.join(
+                [
+                    str(install_prefix / "bin"),
+                    str(dependency_prefix / "debug/bin"),
+                    str(dependency_prefix / "bin"),
+                    environment.get("PATH", ""),
+                ]
+            )
+            command(
+                [consumer / "build" / ("consumer.exe" if IS_WINDOWS else "consumer")],
+                consumer,
+                environment=environment,
+            )
+        finally:
+            for directory in ("src", "include"):
+                (library_project / (directory + "-hidden")).rename(
+                    library_project / directory
+                )
 
     # MARK: Embedded library and template independence
 
@@ -238,18 +260,20 @@ class IntegrationTests(unittest.TestCase):
         print("Integration: add_subdirectory consumer defaults", flush=True)
         consumer_project = workspace / "subdirectory-consumer"
         consumer_project.mkdir()
-        (consumer_project / "CMakeLists.txt").write_text(
-            f"""cmake_minimum_required(VERSION 3.24)
-        project(Outer LANGUAGES CXX)
-        add_subdirectory("{library_project.as_posix()}" library)
-        if(SAMPLE_LIBRARY_BUILD_EXAMPLES OR SAMPLE_LIBRARY_BUILD_TESTS)
-        message(FATAL_ERROR "Consumer unexpectedly enabled examples/tests")
-        endif()
-        if(TARGET SampleLibrary_example OR TARGET SampleLibrary_test)
-        message(FATAL_ERROR "Consumer contains development targets")
-        endif()
-        """
-        )
+        (consumer_project / "CMakeLists.txt").write_text(dedent(f"""\
+                cmake_minimum_required(VERSION 3.24)
+                project(Outer LANGUAGES CXX)
+
+                add_subdirectory("{library_project.as_posix()}" library)
+
+                if(SAMPLE_LIBRARY_BUILD_EXAMPLES OR SAMPLE_LIBRARY_BUILD_TESTS)
+                    message(FATAL_ERROR "Consumer unexpectedly enabled examples/tests")
+                endif()
+
+                if(TARGET SampleLibrary_example OR TARGET SampleLibrary_test)
+                    message(FATAL_ERROR "Consumer contains development targets")
+                endif()
+                """))
         command(
             [
                 "cmake",

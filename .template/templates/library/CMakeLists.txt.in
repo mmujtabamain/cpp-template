@@ -1,81 +1,138 @@
 # Library project template with build-tree and installed-package consumer support.
+
+# MARK: Project and dependencies
+
 cmake_minimum_required(VERSION 3.24)
 project(@PROJECT_NAME@ VERSION 0.1.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(GenerateExportHeader)
 find_package(fmt CONFIG REQUIRED)
+
+# MARK: Build options
+
 # Let add_library select static or shared; development targets default off for consumers.
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(@PROJECT_MACRO@_BUILD_EXAMPLES "Build @PROJECT_NAME@ examples" ${PROJECT_IS_TOP_LEVEL})
 option(@PROJECT_MACRO@_BUILD_TESTS "Build @PROJECT_NAME@ tests" ${PROJECT_IS_TOP_LEVEL})
 
+# MARK: Library target and usage requirements
+
 # Expose the same namespaced target spelling in both build and install trees.
 add_library(@PROJECT_NAME@ src/@PROJECT_NAMESPACE@.cpp)
 add_library(@PROJECT_NAME@::@PROJECT_NAME@ ALIAS @PROJECT_NAME@)
 target_compile_features(@PROJECT_NAME@ PUBLIC cxx_std_23)
-set_target_properties(@PROJECT_NAME@ PROPERTIES
-    CXX_EXTENSIONS OFF CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES
-    VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR})
+set_target_properties(
+    @PROJECT_NAME@
+    PROPERTIES CXX_EXTENSIONS OFF
+               CXX_VISIBILITY_PRESET hidden
+               VISIBILITY_INLINES_HIDDEN YES
+               VERSION ${PROJECT_VERSION}
+               SOVERSION ${PROJECT_VERSION_MAJOR}
+)
+
 # Public includes are relocatable after installation; private headers stay in src/.
-target_include_directories(@PROJECT_NAME@
-    PUBLIC
-        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-        "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
-        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
-    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_include_directories(
+    @PROJECT_NAME@
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+           "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
+           "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
 # fmt is an implementation dependency; static exports still need it when linking consumers.
 target_link_libraries(@PROJECT_NAME@ PRIVATE fmt::fmt)
+
+# MARK: Public export declarations
+
 # Generate DLL export/import declarations in the build tree without modifying source headers.
-generate_export_header(@PROJECT_NAME@
+generate_export_header(
+    @PROJECT_NAME@
     EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/include/@PROJECT_NAMESPACE@/export.hpp"
     EXPORT_MACRO_NAME @PROJECT_MACRO@_EXPORT
-    STATIC_DEFINE @PROJECT_MACRO@_STATIC_DEFINE)
+    STATIC_DEFINE @PROJECT_MACRO@_STATIC_DEFINE
+)
+
 # Propagate the static definition to consumers so DLL import/export attributes are disabled.
 if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(@PROJECT_NAME@ PUBLIC @PROJECT_MACRO@_STATIC_DEFINE)
 endif()
+
+# MARK: Development examples
 
 # The development run target executes the optional example.
 if(@PROJECT_MACRO@_BUILD_EXAMPLES)
     add_executable(@PROJECT_NAME@_example examples/main.cpp)
     target_link_libraries(@PROJECT_NAME@_example PRIVATE @PROJECT_NAME@::@PROJECT_NAME@)
     # Keep the example beside the DLL on Windows, including multi-config builds.
-    set_target_properties(@PROJECT_NAME@ @PROJECT_NAME@_example PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
-    add_custom_target(run COMMAND $<TARGET_FILE:@PROJECT_NAME@_example>
+    set_target_properties(
+        @PROJECT_NAME@ @PROJECT_NAME@_example PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+                                                         "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    )
+    add_custom_target(
+        run
+        COMMAND $<TARGET_FILE:@PROJECT_NAME@_example>
         DEPENDS @PROJECT_NAME@_example
         WORKING_DIRECTORY "$<TARGET_FILE_DIR:@PROJECT_NAME@_example>"
-        USES_TERMINAL VERBATIM)
+        USES_TERMINAL VERBATIM
+    )
 elseif(PROJECT_IS_TOP_LEVEL)
-    add_custom_target(run
-        COMMAND "${CMAKE_COMMAND}" -E echo "Enable @PROJECT_MACRO@_BUILD_EXAMPLES to run the example."
-        COMMAND "${CMAKE_COMMAND}" -E false VERBATIM)
+    add_custom_target(
+        run
+        COMMAND "${CMAKE_COMMAND}" -E echo
+                "Enable @PROJECT_MACRO@_BUILD_EXAMPLES to run the example."
+        COMMAND "${CMAKE_COMMAND}" -E false
+        VERBATIM
+    )
 endif()
+
+# MARK: Library tests
+
 # Use CTest directly; no extra testing framework is needed for the starter API.
 if(@PROJECT_MACRO@_BUILD_TESTS)
     enable_testing()
     add_executable(@PROJECT_NAME@_test tests/@PROJECT_NAMESPACE@_test.cpp)
     target_link_libraries(@PROJECT_NAME@_test PRIVATE @PROJECT_NAME@::@PROJECT_NAME@)
-    set_target_properties(@PROJECT_NAME@ @PROJECT_NAME@_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+    set_target_properties(
+        @PROJECT_NAME@ @PROJECT_NAME@_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+                                                      "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    )
     add_test(NAME @PROJECT_NAME@.add COMMAND @PROJECT_NAME@_test)
 endif()
 
+# MARK: Install artifacts
+
 # Install binaries and public headers, including the generated DLL export header.
-install(TARGETS @PROJECT_NAME@ EXPORT @PROJECT_NAME@Targets
+install(
+    TARGETS @PROJECT_NAME@
+    EXPORT @PROJECT_NAME@Targets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/include/@PROJECT_NAMESPACE@/export.hpp"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/@PROJECT_NAMESPACE@")
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/@PROJECT_NAMESPACE@"
+)
+
+# MARK: Package configuration and exports
+
 # Publish relocatable package metadata for find_package and version compatibility checks.
 set(PACKAGE_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/@PROJECT_NAME@")
-configure_package_config_file("cmake/@PROJECT_NAME@Config.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/@PROJECT_NAME@Config.cmake"
-    INSTALL_DESTINATION "${PACKAGE_DESTINATION}")
-write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/@PROJECT_NAME@ConfigVersion.cmake"
-    VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
+configure_package_config_file(
+    "cmake/@PROJECT_NAME@Config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/@PROJECT_NAME@Config.cmake"
+    INSTALL_DESTINATION "${PACKAGE_DESTINATION}"
+)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/@PROJECT_NAME@ConfigVersion.cmake" VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
 # Export namespaced targets and both package configuration files.
-install(EXPORT @PROJECT_NAME@Targets NAMESPACE @PROJECT_NAME@:: DESTINATION "${PACKAGE_DESTINATION}")
+install(EXPORT @PROJECT_NAME@Targets NAMESPACE @PROJECT_NAME@::
+        DESTINATION "${PACKAGE_DESTINATION}"
+)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/@PROJECT_NAME@Config.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/@PROJECT_NAME@ConfigVersion.cmake" DESTINATION "${PACKAGE_DESTINATION}")
+              "${CMAKE_CURRENT_BINARY_DIR}/@PROJECT_NAME@ConfigVersion.cmake"
+        DESTINATION "${PACKAGE_DESTINATION}"
+)

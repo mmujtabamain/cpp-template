@@ -57,9 +57,9 @@ class ScaffoldGenerationTests(ScaffoldFixture):
                 with self.subTest(project_type=project_type, name=display_name):
                     project = fresh(self.workspace, f"{project_type}-{index}")
                     scaffold(project, display_name, project_type)
-                    self.assertIn(
-                        f"project({target_name} VERSION",
+                    self.assertRegex(
                         (project / "CMakeLists.txt").read_text(),
+                        rf"project\(\s*{target_name}\s+VERSION",
                     )
                     self.assertEqual(
                         json.loads((project / "vcpkg.json").read_text())["name"],

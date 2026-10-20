@@ -1,7 +1,9 @@
 #pragma once
+
 #include <@PROJECT_NAMESPACE@/export.hpp>
 
 namespace @PROJECT_NAMESPACE@
 {
-    @PROJECT_MACRO@_EXPORT int add(int a, int b);
+    // Add two values; the generated export macro supports static and shared builds.
+    @PROJECT_MACRO@_EXPORT int add(int left_value, int right_value);
 }

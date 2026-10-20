@@ -1,8 +1,10 @@
 # Installed package entry point; CMake expands PACKAGE_INIT during project configuration.
 @PACKAGE_INIT@
+
 # Resolve fmt before loading exported targets, including static-library link dependencies.
 include(CMakeFindDependencyMacro)
 find_dependency(fmt CONFIG REQUIRED)
 include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+
 # Report unsupported required components through the standard package mechanism.
 check_required_components(@PROJECT_NAME@)
