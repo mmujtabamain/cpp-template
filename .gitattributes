@@ -1,0 +1,8 @@
+* text=auto
+
+# Git runs hooks through a POSIX shell on macOS and Windows.
+*.sh text eol=lf
+.github/hooks/* text eol=lf
+
+# Native Windows launchers use Windows line endings after checkout.
+*.bat text eol=crlf

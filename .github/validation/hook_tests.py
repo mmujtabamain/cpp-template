@@ -75,6 +75,16 @@ class GitHookTests(unittest.TestCase):
         self.assertIn("WARNING", result.stdout)
         self.assertIn("commit allowed", result.stdout)
 
+    def test_hook_startup_failure_obeys_branch_policy(self):
+        (self.project / ".github/hooks/validate-commit.py").write_text(
+            "raise RuntimeError('Cannot start validation')\n"
+        )
+        self.git("commit", "--allow-empty", "-m", "Block broken hook", success=False)
+        self.git("switch", "-c", "feature")
+        result = self.git("commit", "--allow-empty", "-m", "Warn about broken hook")
+        self.assertIn("WARNING", result.stdout)
+        self.assertIn("commit allowed", result.stdout)
+
     def test_staged_failure_cannot_be_hidden_by_working_tree_fix(self):
         self.stage_invalid_template()
         self.marker.write_text("valid")
