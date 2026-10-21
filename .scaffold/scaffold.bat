@@ -1,5 +1,5 @@
 @echo off
-rem Keep variables local and preserve literal exclamation marks in input.
+
 setlocal DisableDelayedExpansion
 
 if "%~1"=="" (
@@ -9,34 +9,44 @@ if "%~1"=="" (
 
 rem * ARGUMENTS START * ----------------------------------------------- %
 
-rem Capture the destination and exact user input.
+rem get destination
 set "scaffold_destination=%~1"
 shift
+
+rem get project name
 set "project_name=%~1"
 shift
+
+rem get project type
 set "project_type=%~1"
 shift
 
-rem Optionally omit template Git files.
+rem get --force and --no-git flags
 set "force_replacement=OFF"
 set "generate_git=ON"
 
+rem = loop over all arguments
 :read_option
+
+rem - end loop if all arguments passed
 if "%~1"=="" goto arguments_done
-if "%~1"=="--force" (
-    set "force_replacement=ON"
-) else if "%~1"=="--no-git" (
-    set "generate_git=OFF"
-) else (
+
+if "%~1"=="--force" set "force_replacement=ON"
+else if "%~1"=="--no-git" set "generate_git=OFF"
+else (
     echo Unknown scaffold option: %~1 1>&2
+    rem exit on invalid argument
     exit /b 1
 )
 shift
+
+rem + read next argument
 goto read_option
 
+rem if not in args; then prompt user
 :arguments_done
 if not defined project_name set /p "project_name=Project name: "
-if not defined project_type set /p "project_type=Project type [exec/library]: "
+if not defined project_type set /p "project_type=Project type [exec|library]: "
 
 rem * ARGUMENTS END * ------------------------------------------------- %
 

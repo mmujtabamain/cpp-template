@@ -7,40 +7,48 @@ if [ "$#" -lt 1 ] || [ -z "$1" ]; then
     exit 1
 fi
 
+# calculate root first; args are shifted later
+scaffold_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
 # * ARGUMENTS START * ----------------------------------------------- #
 
-# capture the destination and exact user input
+# get destination
 scaffold_destination=$1
 shift
-project_name=${1-}
-if [ "$#" -gt 0 ]; then shift; fi
-project_type=${1-}
-if [ "$#" -gt 0 ]; then shift; fi
 
-# optionally omit template Git files
+# get project name
+project_name=${1-}
+
+# if another arg present; get project type
+if [ "$#" -gt 0 ]; then shift; fi 
+project_type=${1-}
+
+# if another arg present; get --force and --no-git flags
+if [ "$#" -gt 0 ]; then shift; fi
 force_replacement=OFF
 generate_git=ON
 for argument in "$@"; do
     case "$argument" in
         --force) force_replacement=ON ;;
         --no-git) generate_git=OFF ;;
-        *) echo "Unknown scaffold option: $argument" >&2; exit 1 ;;
+        *) echo "Unknown scaffold option: $argument" >&2; exit 1 ;; # exit on invalid argument
     esac
 done
 
+# if not in args; get project name
 if [ -z "$project_name" ]; then
     printf 'Project name: '
     IFS= read -r project_name
 fi
 
+# if not in args; get project type
 if [ -z "$project_type" ]; then
-    printf 'Project type [exec/library]: '
+    printf 'Project type [exec|library]: '
     IFS= read -r project_type
 fi
 
 # * ARGUMENTS END * ------------------------------------------------- #
 
-scaffold_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 exec cmake \
     "-DSCAFFOLD_DESTINATION=$scaffold_destination" \
     "-DPROJECT_DISPLAY_NAME=$project_name" \

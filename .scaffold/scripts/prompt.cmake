@@ -1,4 +1,4 @@
-# MARK: Confirmation
+# Cross Platform function for asking yes or no
 function(ask_yes_no PROMPT_TEXT OUTPUT_VARIABLE)
     message("${PROMPT_TEXT} [y/N]")
 
