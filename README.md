@@ -6,7 +6,7 @@ Generate an executable or an installable static/shared C++23 library from this r
 | ------- | ----------------- | -------- |
 | Windows | Supported         | ✅       |
 | macOS   | Supported         | ✅       |
-| Linux   | Not yet validated | —        |
+| Linux   | Not yet validated | -        |
 
 # Prerequisites
 
@@ -19,7 +19,7 @@ xcode-select --install
 brew install cmake ninja git python pkgconf
 ```
 
-**Windows** — with [WinGet](https://learn.microsoft.com/en-us/windows/package-manager/winget/) installed:
+**Windows** - with [WinGet](https://learn.microsoft.com/en-us/windows/package-manager/winget/) installed:
 
 ```powershell
 winget install --exact --id Kitware.CMake
@@ -42,7 +42,7 @@ sudo apt install build-essential cmake ninja-build git python3 curl zip unzip ta
 
 > On Windows, use the corresponding `*.bat` scripts and `python` instead of `python3`.
 
-Run `scaffold-here.sh` with a project name and type: `exec` for executable programs or `library` for libraries. Use `--force` to overwrite an existing generated project without confirmation.
+Run `scaffold-here.sh` with a _project name_ and _type_; `exec` for executable programs or `library` for libraries. Use `--force` to overwrite an existing generated project without confirmation.
 
 ```sh
 ./scaffold-here.sh "SampleRuntime" exec
@@ -55,16 +55,30 @@ Run `scaffold-here.sh` with a project name and type: `exec` for executable progr
 
 Templates and launchers stay in `.scaffold/` for reuse. An external destination receives only the generated project. `scaffold-here.sh` always targets this repository's root, even when called from another directory.
 
+### Enable Hooks see [Git hooks](#commit-validation)
+
+Enable the tracked hooks once in each template clone:
+
+```sh
+python3 .github/install-hooks.py
+```
+
+The installer sets the clone's local `core.hooksPath` to `.github/hooks`; it leaves an existing custom local hook path unchanged.
+
+> Hooks prefer Python from `.venv/`, then fall back to Python on `PATH`.
+
+### Run setup script
+
 Run `setup.sh` afterwards to complete the setup.
 
-## Git
+## Git flags
 
-| Option | Effect |
-| --- | --- |
-| `--git` | Generate GitHub CI, the main ruleset, `.gitignore`, and `.gitattributes` (default). |
-| `--no-git` | Omit Git configuration and CI files. |
-| `--keep-git` | Keep existing `.git` metadata without prompting. |
-| `--remove-git` | Remove only the destination's `.git` metadata without prompting. |
+| Option         | Effect                                                                              |
+| -------------- | ----------------------------------------------------------------------------------- |
+| `--git`        | Generate GitHub CI, the main ruleset, `.gitignore`, and `.gitattributes` (default). |
+| `--no-git`     | Omit Git configuration and CI files.                                                |
+| `--keep-git`   | Keep existing `.git` metadata without prompting.                                    |
+| `--remove-git` | Remove only the destination's `.git` metadata without prompting.                    |
 
 Scaffolding removes the destination's existing top-level `.git*` files and directories, except `.git`, before installing the selected template's Git files. This removes template hooks and validation scripts from the generated project. `.scaffold/` stays intact. Unrelated files and `external/vcpkg/` are kept.
 
@@ -78,25 +92,13 @@ If `.git` exists, scaffolding asks whether to remove it; the default is **no**. 
 ./.scaffold/scaffold.sh "../Sample Library" "Sample Library" library --git --remove-git
 ```
 
-The scaffolder and generated README print commands for `git init`, local identity, the first commit, and remote setup. Git is still required by setup to acquire vcpkg, even with `--no-git`.
+## Commit validation
 
-## Commit and merge validation
-
-These checks maintain the template. Generated projects receive their own build workflow when Git is enabled.
+Git pre commit hooks run `validate.py`. Run it manually to see the checks and warnings:
 
 ```sh
 python3 .github/validate.py
 python3 .github/validate.py --full
 ```
 
-`--full` also builds with real vcpkg/fmt, tests static and shared libraries, and checks installed consumers. It requires network access. Commits to `main` run the full suite and block on failure; other branches run fast checks and allow commits with warnings.
-
-Enable the tracked hooks once in each template clone:
-
-```sh
-python3 .github/install-hooks.py
-```
-
-The installer sets the clone's local `core.hooksPath` to `.github/hooks`; it leaves an existing custom local hook path unchanged.
-
-> Hooks prefer Python from `.venv/`, then fall back to Python on `PATH`.
+`--full` builds with real vcpkg/fmt, tests static and shared libraries, and checks installed consumers. It requires network access. Commits to `main` run the full suite and block on failure; other branches run fast checks and allow commits with warnings.

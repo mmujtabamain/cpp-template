@@ -4,13 +4,13 @@
 import argparse
 import unittest
 
-from validation.tests.scaffold_gen_tests import ScaffoldGenerationTests
-from validation.tests.scaffold_safety_tests import ScaffoldSafetyTests
-from validation.tests.scaffold_location_tests import ScaffoldLocationTests
-from validation.tests.scaffold_git_tests import ScaffoldGitTests
-from validation.tests.dev_script_tests import DevelopmentScriptTests
-from validation.tests.hook_tests import GitHookTests
-from validation.tests.integration_tests import IntegrationTests
+from scripts.tests.scaffold_gen_tests import ScaffoldGenerationTests
+from scripts.tests.scaffold_safety_tests import ScaffoldSafetyTests
+from scripts.tests.scaffold_location_tests import ScaffoldLocationTests
+from scripts.tests.scaffold_git_tests import ScaffoldGitTests
+from scripts.tests.dev_script_tests import DevelopmentScriptTests
+from scripts.tests.hook_tests import GitHookTests
+from scripts.tests.integration_tests import IntegrationTests
 
 
 class ValidationApplication:
