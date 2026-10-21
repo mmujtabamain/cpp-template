@@ -99,14 +99,12 @@ def scaffold(
     success=True,
     destination=None,
     git=True,
-    remove_git="OFF",
 ) -> subprocess.CompletedProcess:
     """Exercise shared CMake validation and destructive-replacement confirmation."""
     arguments = [
         "cmake",
         f"-DSCAFFOLD_DESTINATION={destination or project}",
         f"-DSCAFFOLD_GIT={'ON' if git else 'OFF'}",
-        f"-DSCAFFOLD_REMOVE_GIT={remove_git}",
         f"-DPROJECT_DISPLAY_NAME={name}",
         f"-DPROJECT_TYPE={project_type}",
     ]

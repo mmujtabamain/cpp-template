@@ -71,25 +71,20 @@ The installer sets the clone's local `core.hooksPath` to `.github/hooks`; it lea
 
 Run `setup.sh` afterwards to complete the setup.
 
-## Git flags
+## Git
 
-| Option         | Effect                                                                              |
-| -------------- | ----------------------------------------------------------------------------------- |
-| `--git`        | Generate GitHub CI, the main ruleset, `.gitignore`, and `.gitattributes` (default). |
-| `--no-git`     | Omit Git configuration and CI files.                                                |
-| `--keep-git`   | Keep existing `.git` metadata without prompting.                                    |
-| `--remove-git` | Remove only the destination's `.git` metadata without prompting.                    |
+Scaffolding copies GitHub CI, the main ruleset, `.gitignore`, and `.gitattributes` by default.
 
-Scaffolding removes the destination's existing top-level `.git*` files and directories, except `.git`, before installing the selected template's Git files. This removes template hooks and validation scripts from the generated project. `.scaffold/` stays intact. Unrelated files and `external/vcpkg/` are kept.
+Use `--no-git` to skip these. It does not delete existing Git files, hooks, or rulesets;
 
-If `.git` exists, scaffolding asks whether to remove it; the default is **no**. `--force` only confirms replacement of generated files and does not approve Git-history removal. Git history and remotes remain unchanged when kept; the template's `core.hooksPath` setting is cleared so deleted hooks do not block commits. Custom hook settings are preserved.
+Manage repository Git setup and cleanup **yourself**. Existing Git files, `.scaffold/`, unrelated files, and `external/vcpkg/` are preserved; without `--no-git`, matching template files are overwritten.
 
 ```sh
-# generate without Git files, keeping any existing history
-./scaffold-here.sh "SampleRuntime" exec --no-git --keep-git
+# generate without copying Git files
+./scaffold-here.sh "SampleRuntime" exec --no-git
 
-# generate externally and explicitly remove that destination's old history
-./.scaffold/scaffold.sh "../Sample Library" "Sample Library" library --git --remove-git
+# generate externally with the default Git files
+./.scaffold/scaffold.sh "../Sample Library" "Sample Library" library
 ```
 
 ## Commit validation

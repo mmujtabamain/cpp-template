@@ -31,7 +31,7 @@ Setup never removes build output. To clean, remove `build/` yourself.
 ## Dependencies
 
 Edit `vcpkg.json` to add dependencies, then rerun setup. The starter dependency
-is `fmt`. Setup clones the latest vcpkg into ignored `external/vcpkg/`, removes
+is `fmt`. Setup clones the latest vcpkg into ignored `external/vcpkg/`, preserves
 its `.git`, bootstraps it, and installs the manifest into `vcpkg_installed/`.
 Later setup runs reuse that copy. There is no pinned revision or submodule.
 Remove `external/vcpkg/` manually if you need a fresh copy.

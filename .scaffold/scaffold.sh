@@ -3,7 +3,7 @@
 set -eu
 
 if [ "$#" -lt 1 ] || [ -z "$1" ]; then
-    echo "Usage: $0 <location> [project-name] [exec|library] [--force] [--git|--no-git] [--keep-git|--remove-git]" >&2
+    echo "Usage: $0 <location> [project-name] [exec|library] [--force] [--no-git]" >&2
     exit 1
 fi
 
@@ -17,17 +17,13 @@ if [ "$#" -gt 0 ]; then shift; fi
 project_type=${1-}
 if [ "$#" -gt 0 ]; then shift; fi
 
-# git files and git history are separate choices
+# optionally omit template Git files
 force_replacement=OFF
 generate_git=ON
-remove_git=ASK
 for argument in "$@"; do
     case "$argument" in
         --force) force_replacement=ON ;;
-        --git) generate_git=ON ;;
         --no-git) generate_git=OFF ;;
-        --keep-git) remove_git=OFF ;;
-        --remove-git) remove_git=ON ;;
         *) echo "Unknown scaffold option: $argument" >&2; exit 1 ;;
     esac
 done
@@ -51,5 +47,4 @@ exec cmake \
     "-DPROJECT_TYPE=$project_type" \
     "-DSCAFFOLD_FORCE=$force_replacement" \
     "-DSCAFFOLD_GIT=$generate_git" \
-    "-DSCAFFOLD_REMOVE_GIT=$remove_git" \
     -P "$scaffold_root/scripts/scaffold.cmake"

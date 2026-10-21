@@ -37,6 +37,9 @@ class DevelopmentScriptTests(ScaffoldFixture):
         vcpkg_directory = self.project / "external/vcpkg"
         vcpkg_directory.mkdir(parents=True)
         (vcpkg_directory / "keep").write_text("malformed tree")
+        metadata = vcpkg_directory / ".git"
+        metadata.mkdir()
+        (metadata / "keep").write_text("dependency history")
         result = CommandRunner.run(
             ["cmake", "-P", self.project / "scripts/setup.cmake"],
             self.project,
@@ -44,3 +47,4 @@ class DevelopmentScriptTests(ScaffoldFixture):
         )
         self.assertIn("Malformed vcpkg tree", result.stdout)
         self.assertEqual((vcpkg_directory / "keep").read_text(), "malformed tree")
+        self.assertEqual((metadata / "keep").read_text(), "dependency history")

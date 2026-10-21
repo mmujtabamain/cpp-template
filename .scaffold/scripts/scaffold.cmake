@@ -5,7 +5,6 @@
 
 cmake_minimum_required(VERSION 3.24)
 include("${CMAKE_CURRENT_LIST_DIR}/prompt.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/git.cmake")
 get_filename_component(SCAFFOLD_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 set(TEMPLATE_DIRECTORY "${SCAFFOLD_ROOT}/templates")
 set(STAGING_DIRECTORY "${SCAFFOLD_ROOT}/.scaffold-tmp")
@@ -29,20 +28,13 @@ if(EXISTS "${PROJECT_ROOT}" AND NOT IS_DIRECTORY "${PROJECT_ROOT}")
     message(FATAL_ERROR "Scaffold location must be a directory.")
 endif()
 
-# git files and existing history are separate choices
+# optionally copy template Git files; repository management belongs to the user
 if(NOT DEFINED SCAFFOLD_GIT)
     set(SCAFFOLD_GIT ON)
 endif()
-if(NOT DEFINED SCAFFOLD_REMOVE_GIT)
-    set(SCAFFOLD_REMOVE_GIT ASK)
-endif()
 string(TOUPPER "${SCAFFOLD_GIT}" SCAFFOLD_GIT)
-string(TOUPPER "${SCAFFOLD_REMOVE_GIT}" SCAFFOLD_REMOVE_GIT)
 if(NOT SCAFFOLD_GIT MATCHES "^(ON|OFF)$")
     message(FATAL_ERROR "SCAFFOLD_GIT must be ON or OFF.")
-endif()
-if(NOT SCAFFOLD_REMOVE_GIT MATCHES "^(ASK|ON|OFF)$")
-    message(FATAL_ERROR "SCAFFOLD_REMOVE_GIT must be ASK, ON, or OFF.")
 endif()
 
 if(SCAFFOLD_GIT)
@@ -232,6 +224,9 @@ foreach(TEMPLATE_KIND IN LISTS TEMPLATE_KINDS)
         "${TEMPLATE_DIRECTORY}/${TEMPLATE_KIND}/*"
     )
     foreach(TEMPLATE_INPUT_PATH IN LISTS TEMPLATE_INPUT_PATHS)
+        if(NOT SCAFFOLD_GIT AND TEMPLATE_INPUT_PATH MATCHES "(^|/)\\.gitkeep$")
+            continue()
+        endif()
         set(GENERATED_RELATIVE_PATH "${TEMPLATE_INPUT_PATH}")
         # Replace generic library paths with the normalized package and namespace names.
         if(TEMPLATE_KIND STREQUAL "library")
@@ -385,12 +380,6 @@ endif()
 
 # MARK: Replacement and completion
 
-# remove old Git files; only the selected template's Git files are installed
-clear_template_hooks("${PROJECT_ROOT}")
-file(GLOB OLD_GIT_PATHS RELATIVE "${PROJECT_ROOT}" "${PROJECT_ROOT}/.git*")
-list(REMOVE_ITEM OLD_GIT_PATHS .git)
-list(APPEND GENERATED_PATHS ${OLD_GIT_PATHS})
-
 # Only a fully rendered replacement reaches this destructive commit step.
 foreach(GENERATED_PATH IN LISTS GENERATED_PATHS)
     if(IS_SYMLINK "${PROJECT_ROOT}/${GENERATED_PATH}")
@@ -426,4 +415,3 @@ message(
         "Generated ${PROJECT_TYPE}: ${PROJECT_DISPLAY_NAME} (${PROJECT_NAME}, ${PROJECT_NAMESPACE}, ${PROJECT_MANIFEST_NAME})"
 )
 message(STATUS "Next: setup.sh / setup.bat, then run.sh / run.bat")
-finish_scaffold_git("${PROJECT_ROOT}" "${SCAFFOLD_REMOVE_GIT}" "${SCAFFOLD_GIT}")

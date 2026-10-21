@@ -2,6 +2,7 @@ import os
 
 from ..common import (
     CommandRunner,
+    IS_WINDOWS,
     ProjectWorkspace,
     ScaffoldFixture,
     launcher,
@@ -23,95 +24,91 @@ class ScaffoldGitTests(ScaffoldFixture):
         self.assertFalse((project / ".github/hooks").exists())
         self.assertFalse((project / ".github/validate.py").exists())
 
-    def test_only_template_git_files_remain(self):
-        for filename in (
+    def test_existing_git_files_are_preserved(self):
+        files = (
             ".github/old.yml",
+            ".github/hooks/pre-commit",
             ".githooks/old",
             ".gitmodules",
             ".gitconfig",
-        ):
+        )
+        for filename in files:
             path = self.project / filename
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("old Git data")
+            path.write_text("existing Git data")
 
         self.scaffold()
-        self.assert_git_files(self.project, True)
-        github_files = {
-            str(path.relative_to(self.project / ".github")).replace(os.sep, "/")
-            for path in (self.project / ".github").rglob("*")
-            if path.is_file()
-        }
-        self.assertEqual(
-            github_files, {"workflows/validate.yml", "rulesets/protect-main.json"}
-        )
-        for filename in (".githooks", ".gitmodules", ".gitconfig"):
-            self.assertFalse((self.project / filename).exists())
+        for filename in files:
+            self.assertEqual(
+                (self.project / filename).read_text(), "existing Git data"
+            )
+        self.assertTrue((self.project / ".github/workflows/validate.yml").is_file())
+        self.assertTrue((self.project / ".github/rulesets/protect-main.json").is_file())
 
-    def test_native_launcher_disables_git_files(self):
+    def test_native_launcher_disables_git_file_copying(self):
+        original_git_files = {
+            filename: (self.project / filename).read_bytes()
+            for filename in (".gitignore", ".gitattributes", ".github/validate.py")
+        }
         launcher(self.project, "scaffold", "SampleRuntime", "exec", "--no-git")
-        self.assert_git_files(self.project, False)
+        for filename, original in original_git_files.items():
+            self.assertEqual((self.project / filename).read_bytes(), original)
         self.assertIn(
             "Git files were disabled", (self.project / "README.md").read_text()
         )
+        self.assertFalse((self.project / "assets/.gitkeep").exists())
         self.assertTrue((self.project / ".scaffold/templates/git/.github").is_dir())
 
-    def test_git_files_can_be_enabled_again(self):
-        self.scaffold(git=False)
-        self.scaffold(git=True, force=True)
-        self.assert_git_files(self.project, True)
-        self.assertIn("git init -b main", (self.project / "README.md").read_text())
-
-    def test_git_removal_prompt_defaults_to_keep(self):
-        metadata = self.create_metadata(self.project)
-        result = self.scaffold(remove_git="ASK")
-        self.assertIn("Remove Git metadata? [y/N]", result.stdout)
-        self.assertEqual((metadata / "keep").read_text(), "existing history")
-        self.assertIn("git remote -v", result.stdout)
-
-    def test_force_does_not_approve_git_removal(self):
-        metadata = self.create_metadata(self.project)
-        result = self.scaffold(remove_git="ASK", force=True, answer="n\n")
-        self.assertIn("Remove Git metadata? [y/N]", result.stdout)
-        self.assertTrue(metadata.is_dir())
-
-    def test_confirmed_git_removal_only_affects_the_destination(self):
-        source_metadata = self.create_metadata(self.project)
-        destination = self.workspace / "generated project"
-        destination.mkdir()
-        destination_metadata = self.create_metadata(destination)
-        result = scaffold(
-            self.project,
-            "SampleRuntime",
-            "exec",
-            destination=destination,
-            remove_git="ASK",
-            answer="y\n",
-        )
-        self.assertFalse(destination_metadata.exists())
-        self.assertEqual((source_metadata / "keep").read_text(), "existing history")
-        self.assert_git_files(destination, True)
-        self.assertIn("git init -b main", result.stdout)
-        self.assertIn("git remote add origin", result.stdout)
-
-    def test_native_history_flags_are_independent_of_git_files(self):
-        for history_flag, keep_metadata in (
-            ("--keep-git", True),
-            ("--remove-git", False),
-        ):
-            with self.subTest(history_flag=history_flag):
-                project = ProjectWorkspace().create(self.workspace, history_flag)
-                metadata = self.create_metadata(project)
-                result = launcher(
-                    project,
-                    "scaffold",
-                    "SampleRuntime",
-                    "exec",
-                    "--no-git",
-                    history_flag,
+    def test_external_destination_git_files_are_optional(self):
+        for enabled in (False, True):
+            with self.subTest(enabled=enabled):
+                destination = self.workspace / str(enabled)
+                scaffold(
+                    self.project, "SampleRuntime", "exec",
+                    destination=destination, git=enabled,
                 )
-                self.assertNotIn("Remove Git metadata? [y/N]", result.stdout)
-                self.assertEqual(metadata.exists(), keep_metadata)
-                self.assert_git_files(project, False)
+                self.assert_git_files(destination, enabled)
+                self.assertEqual((destination / "assets/.gitkeep").exists(), enabled)
+
+    def test_no_git_preserves_previously_generated_git_files(self):
+        destination = self.workspace / "generated"
+        scaffold(self.project, "SampleRuntime", "exec", destination=destination)
+        git_files = {
+            path.relative_to(destination): path.read_bytes()
+            for path in destination.rglob("*")
+            if path.is_file() and path.relative_to(destination).parts[0].startswith(".git")
+        }
+        scaffold(
+            self.project, "SampleRuntime", "exec",
+            destination=destination, git=False, force=True,
+        )
+        for filename, original in git_files.items():
+            self.assertEqual((destination / filename).read_bytes(), original)
+
+    def test_git_metadata_is_preserved_without_prompting(self):
+        metadata = self.create_metadata(self.project)
+        for enabled in (False, True):
+            with self.subTest(enabled=enabled):
+                result = self.scaffold(git=enabled, force=True, answer="y\n")
+                self.assertNotIn("Remove Git", result.stdout)
+                self.assertEqual((metadata / "keep").read_text(), "existing history")
+
+    def test_obsolete_git_flags_are_rejected(self):
+        metadata = self.create_metadata(self.project)
+        original = ProjectWorkspace.snapshot(self.project)
+        script = self.project / (
+            "scaffold-here.bat" if IS_WINDOWS else "scaffold-here.sh"
+        )
+        invocation = ["cmd", "/c", script] if IS_WINDOWS else [script]
+        for flag in ("--git", "--keep-git", "--remove-git"):
+            with self.subTest(flag=flag):
+                result = CommandRunner.run(
+                    [*invocation, "SampleRuntime", "exec", flag],
+                    self.project, success=False,
+                )
+                self.assertIn("Unknown scaffold option", result.stdout)
+                self.assertEqual(ProjectWorkspace.snapshot(self.project), original)
+                self.assertTrue(metadata.is_dir())
 
     def test_missing_git_template_preserves_existing_project(self):
         self.scaffold()
@@ -159,27 +156,25 @@ class ScaffoldGitTests(ScaffoldFixture):
             git("config", "core.hooksPath", hooks_path)
             git("remote", "add", "origin", "https://example.invalid/template")
 
-            scaffold(project, "SampleRuntime", "exec", remove_git="OFF")
+            scaffold(project, "SampleRuntime", "exec")
             self.assertEqual(git("rev-parse", "HEAD").stdout, original_head)
             self.assertEqual(
                 git("remote", "get-url", "origin").stdout.strip(),
                 "https://example.invalid/template",
             )
-            result = git(
-                "config",
-                "--local",
-                "--get",
-                "core.hooksPath",
-                success=hooks_path != ".github/hooks",
+            self.assertEqual(
+                git("config", "--local", "--get", "core.hooksPath").stdout.strip(),
+                hooks_path,
             )
-            if hooks_path == "custom-hooks":
-                self.assertEqual(result.stdout.strip(), hooks_path)
 
     def test_worktree_pointer_does_not_remove_shared_history(self):
         shared_history = self.workspace / "shared history"
         shared_history.mkdir()
         (shared_history / "keep").write_text("shared history")
         (self.project / ".git").write_text(f"gitdir: {shared_history.as_posix()}\n")
-        self.scaffold(remove_git="ON")
-        self.assertFalse((self.project / ".git").exists())
+        self.scaffold()
+        self.assertEqual(
+            (self.project / ".git").read_text(),
+            f"gitdir: {shared_history.as_posix()}\n",
+        )
         self.assertEqual((shared_history / "keep").read_text(), "shared history")

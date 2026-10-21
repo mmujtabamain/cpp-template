@@ -3,7 +3,7 @@ rem Keep variables local and preserve literal exclamation marks in input.
 setlocal DisableDelayedExpansion
 
 if "%~1"=="" (
-    echo Usage: scaffold.bat ^<location^> [project-name] [exec^|library] [--force] [--git^|--no-git] [--keep-git^|--remove-git] 1>&2
+    echo Usage: scaffold.bat ^<location^> [project-name] [exec^|library] [--force] [--no-git] 1>&2
     exit /b 1
 )
 
@@ -17,23 +17,16 @@ shift
 set "project_type=%~1"
 shift
 
-rem Git files and Git history are separate choices.
+rem Optionally omit template Git files.
 set "force_replacement=OFF"
 set "generate_git=ON"
-set "remove_git=ASK"
 
 :read_option
 if "%~1"=="" goto arguments_done
 if "%~1"=="--force" (
     set "force_replacement=ON"
-) else if "%~1"=="--git" (
-    set "generate_git=ON"
 ) else if "%~1"=="--no-git" (
     set "generate_git=OFF"
-) else if "%~1"=="--keep-git" (
-    set "remove_git=OFF"
-) else if "%~1"=="--remove-git" (
-    set "remove_git=ON"
 ) else (
     echo Unknown scaffold option: %~1 1>&2
     exit /b 1
@@ -54,7 +47,6 @@ cmake ^
     "-DPROJECT_TYPE=%project_type%" ^
     "-DSCAFFOLD_FORCE=%force_replacement%" ^
     "-DSCAFFOLD_GIT=%generate_git%" ^
-    "-DSCAFFOLD_REMOVE_GIT=%remove_git%" ^
     -P "%~dp0scripts\scaffold.cmake"
 
 exit /b %errorlevel%

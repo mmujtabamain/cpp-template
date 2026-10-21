@@ -24,7 +24,7 @@ set(VCPKG_ROOT "${PROJECT_ROOT}/external/vcpkg")
 
 # MARK: Local vcpkg acquisition
 
-# Clone current upstream only when absent; history is unnecessary for disposable tooling.
+# Clone current upstream only when absent; preserve its Git metadata.
 if(NOT EXISTS "${VCPKG_ROOT}")
     file(MAKE_DIRECTORY "${PROJECT_ROOT}/external")
     execute_process(
@@ -32,9 +32,6 @@ if(NOT EXISTS "${VCPKG_ROOT}")
                 "${VCPKG_ROOT}" COMMAND_ERROR_IS_FATAL ANY
     )
 endif()
-
-# Also recover a first setup interrupted between clone and Git metadata removal.
-file(REMOVE_RECURSE "${VCPKG_ROOT}/.git")
 
 # Select the host platform's bootstrap script and executable name.
 if(CMAKE_HOST_WIN32)

@@ -32,6 +32,7 @@ class ScaffoldSafetyTests(ScaffoldFixture):
             self.assertFalse((self.project / path).exists(), path)
         for path in (
             ".git/keep",
+            ".github/keep",
             "external/vcpkg/keep",
             "notes.txt",
             ".scaffold",
@@ -39,7 +40,6 @@ class ScaffoldSafetyTests(ScaffoldFixture):
             "scaffold-here.bat",
         ):
             self.assertTrue((self.project / path).exists(), path)
-        self.assertFalse((self.project / ".github/keep").exists())
         self.assertIn("Replacement", (self.project / "src/main.cpp").read_text())
 
     def test_invalid_input_preserves_existing_data(self):
