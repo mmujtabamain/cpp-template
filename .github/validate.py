@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the C++ template in disposable projects using Python and CMake."""
+"""Validate this scaffold repository; generated-project CI builds only its own project."""
 
 import argparse
 import unittest
@@ -11,6 +11,8 @@ from scripts.tests.scaffold_git_tests import ScaffoldGitTests
 from scripts.tests.dev_script_tests import DevelopmentScriptTests
 from scripts.tests.hook_tests import GitHookTests
 from scripts.tests.integration_tests import IntegrationTests
+from scripts.tests.script_syntax_tests import ScriptSyntaxTests
+from scripts.tests.cmake_version_tests import CMakeVersionTests
 
 
 class ValidationApplication:
@@ -18,6 +20,8 @@ class ValidationApplication:
 
     def run(self, *, full=False) -> int:
         test_classes = [
+            ScriptSyntaxTests,
+            CMakeVersionTests,
             ScaffoldGenerationTests,
             ScaffoldSafetyTests,
             ScaffoldLocationTests,

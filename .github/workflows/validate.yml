@@ -1,4 +1,4 @@
-name: Validate C++ template
+name: Validate scaffold
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   validation:
-    name: Template checks (${{ matrix.os }})
+    name: Scaffold checks (${{ matrix.os }}, CMake ${{ matrix.cmake }})
     # Feature branches receive diagnostics; main and PRs targeting main must pass.
     continue-on-error: ${{ !(github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event.merge_group.base_ref == 'refs/heads/main') }}
     timeout-minutes: 30
@@ -19,6 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
+        cmake: ["3.24.3", "3.31.6", "latest"]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -26,6 +27,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      - name: Install validation dependencies
+        run: python -m pip install -r .github/requirements.txt
+      - name: Install selected CMake
+        if: matrix.cmake != 'latest'
+        run: python -m pip install "cmake==${{ matrix.cmake }}"
+      - name: Install latest CMake
+        if: matrix.cmake == 'latest'
+        run: python -m pip install --upgrade cmake
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - name: Scaffold, build, test, install, and consume

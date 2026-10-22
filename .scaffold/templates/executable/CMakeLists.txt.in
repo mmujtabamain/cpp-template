@@ -2,7 +2,7 @@
 
 # MARK: Project and dependencies
 
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION @PROJECT_CMAKE_VERSION@)
 project(@PROJECT_NAME@ VERSION 0.1.0 LANGUAGES CXX)
 find_package(fmt CONFIG REQUIRED)
 

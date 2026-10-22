@@ -3,7 +3,7 @@
 set -eu
 
 if [ "$#" -lt 1 ] || [ -z "$1" ]; then
-    echo "Usage: $0 <location> [project-name] [exec|library] [--force] [--no-git]" >&2
+    echo "Usage: $0 <location> [project-name] [exec|library] [--force] [--no-git] [--cmake-version VERSION]" >&2
     exit 1
 fi
 
@@ -27,12 +27,21 @@ project_type=${1-}
 if [ "$#" -gt 0 ]; then shift; fi
 force_replacement=OFF
 generate_git=ON
-for argument in "$@"; do
-    case "$argument" in
+project_cmake_version=
+while [ "$#" -gt 0 ]; do
+    case "$1" in
         --force) force_replacement=ON ;;
         --no-git) generate_git=OFF ;;
-        *) echo "Unknown scaffold option: $argument" >&2; exit 1 ;; # exit on invalid argument
+        --cmake-version)
+            if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+                echo "--cmake-version requires a version" >&2; exit 1
+            fi
+            project_cmake_version=$2
+            shift
+            ;;
+        *) echo "Unknown scaffold option: $1" >&2; exit 1 ;;
     esac
+    shift
 done
 
 # if not in args; get project name
@@ -55,4 +64,5 @@ exec cmake \
     "-DPROJECT_TYPE=$project_type" \
     "-DSCAFFOLD_FORCE=$force_replacement" \
     "-DSCAFFOLD_GIT=$generate_git" \
+    "-DPROJECT_CMAKE_VERSION=$project_cmake_version" \
     -P "$scaffold_root/scripts/scaffold.cmake"

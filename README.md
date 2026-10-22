@@ -10,7 +10,7 @@ Generate an executable or an installable static/shared C++23 library from this r
 
 # Prerequisites
 
-CMake 3.24+, Ninja, Git, Python 3 for Git hooks, and a C++23 compiler (Xcode command line tools on macOS; Visual Studio C++ tools and a Developer Command Prompt on Windows; GCC or Clang on Linux).
+CMake 3.24+, Ninja, Git, Python 3 for scaffold validation, and a C++23 compiler (Xcode command line tools on macOS; Visual Studio C++ tools and a Developer Command Prompt on Windows; GCC or Clang on Linux).
 
 **macOS** - with [Homebrew](https://brew.sh/) installed:
 
@@ -55,11 +55,12 @@ Run `scaffold-here.sh` with a _project name_ and _type_; `exec` for executable p
 
 Templates and launchers stay in `.scaffold/` for reuse. An external destination receives only the generated project. `scaffold-here.sh` always targets this repository's root, even when called from another directory.
 
-### Enable Hooks see [Git hooks](#commit-validation)
+### Enable Hooks see [Git hooks](#scaffold-validation-and-generated-project-validation)
 
 Enable the tracked hooks once in each template clone:
 
 ```sh
+python3 -m pip install -r .github/requirements.txt
 python3 .github/install-hooks.py
 ```
 
@@ -74,6 +75,43 @@ and build output. To recover from a failed clone/bootstrap, run `./setup.sh --cl
 (or `setup.bat --clean`). **Warning:** clean setup deletes `external/vcpkg/`,
 `vcpkg_installed/`, and `build/`, including local changes, then clones and sets up
 again. Project source files and the project's Git metadata are preserved.
+
+## CMake compatibility
+
+The generated minimum defaults to the CMake executing the scaffold (the version
+shown by `cmake --version`). Select an older supported minimum explicitly:
+
+```sh
+./scaffold-here.sh "SampleRuntime" exec --cmake-version 3.24
+```
+
+`major.minor` and `major.minor.patch` are accepted. The value is written to
+`CMakeLists.txt`, setup/run scripts, preset metadata, and generated CI. A requested
+version newer than the running CMake is rejected; install that version first.
+This sets a minimum requirement, rather than downloading or switching local CMake.
+
+| CMake version | Supported | Verification |
+| --- | --- | --- |
+| 3.5–3.19 | No | Missing C++23 compile features and current preset support. |
+| 3.20–3.23 | No | Preset schema 5 needs 3.24; real 3.21.4 configuration also failed to recognize AppleClang C++23. |
+| 3.24–3.30 | Yes | Fast suite with 3.24.3; full lifecycle in CI. |
+| 3.31 | Yes | Fast suite with 3.31.6; full lifecycle in CI. |
+| 4.x | Yes | Fast suite with 4.4.2; latest release tested in CI. |
+
+The floor remains 3.24: shared presets use
+[schema 5](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html),
+which requires 3.24. Although general
+[C++23 compile features](https://cmake.org/cmake/help/latest/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html)
+were introduced in 3.20, compiler support differs. Testing CMake 3.21.4 with
+AppleClang 21 failed on `cxx_std_23`; 3.24.3 configured both project types.
+Supporting 3.5 would require different project templates. The scaffold also
+requires 3.24+. Compiler and third-party package requirements remain separate;
+vcpkg may acquire newer tools for its own builds.
+
+The repository CI matrix runs the full lifecycle on macOS and Windows for
+3.24.3, 3.31.6, and the latest release. Local version checks include generation,
+preset parsing, and compiler configuration for both project types; remote CI
+results are separate from these local checks.
 
 ## Git
 
@@ -91,9 +129,26 @@ Manage repository Git setup and cleanup **yourself**. Existing Git files, `.scaf
 ./.scaffold/scaffold.sh "../Sample Library" "Sample Library" library
 ```
 
-## Commit validation
+## Scaffold validation and generated-project validation
 
-Git pre commit hooks run `validate.py`. Run it manually to see the checks and warnings:
+This repository's `.github/validate.py` checks the scaffold: Python, Bash, and
+PowerShell syntax, generation/replacement safety, Git preservation, version
+selection, setup recovery, and commit hooks. Workflow commands are parsed with
+their corresponding shell; PowerShell checks run on Windows CI, Bash checks on
+macOS (and anywhere Bash is installed). Native Batch launchers are exercised by
+the Windows tests. Install the validation dependency first:
+
+```sh
+python3 -m pip install -r .github/requirements.txt
+```
+
+Generated projects receive a separate `.github/workflows/validate.yml` that runs
+their setup, build, and library tests. It does not run scaffold tests or require
+Python validation packages. The render-time checks in
+`.scaffold/scripts/verify-output.cmake` only check staging completeness and JSON
+before replacing files; they do not replace either validation suite.
+
+Git pre commit hooks run repository validation. Run it manually:
 
 ```sh
 python3 .github/validate.py

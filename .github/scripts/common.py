@@ -99,6 +99,7 @@ def scaffold(
     success=True,
     destination=None,
     git=True,
+    cmake_version=None,
 ) -> subprocess.CompletedProcess:
     """Exercise shared CMake validation and destructive-replacement confirmation."""
     arguments = [
@@ -108,6 +109,8 @@ def scaffold(
         f"-DPROJECT_DISPLAY_NAME={name}",
         f"-DPROJECT_TYPE={project_type}",
     ]
+    if cmake_version is not None:
+        arguments.append(f"-DPROJECT_CMAKE_VERSION={cmake_version}")
     if force:
         arguments.append("-DSCAFFOLD_FORCE=ON")
     return CommandRunner.run(

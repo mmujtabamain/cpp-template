@@ -3,7 +3,7 @@
 
 # MARK: Project paths and development preset
 
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION @PROJECT_CMAKE_VERSION@)
 
 # get PROJECT_ROOT
 get_filename_component(PROJECT_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)

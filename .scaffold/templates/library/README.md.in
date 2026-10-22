@@ -4,7 +4,7 @@ Installable C++23 library: `@PROJECT_NAME@::@PROJECT_NAME@`.
 
 ## Development
 
-Install CMake 3.24+, Ninja, Git, and a compiler supporting C++23. On macOS,
+Install CMake @PROJECT_CMAKE_VERSION@+, Ninja, Git, and a compiler supporting C++23. On macOS,
 install the Xcode command line tools. On Windows, install Visual Studio C++
 build tools and run commands from a Developer Command Prompt.
 
