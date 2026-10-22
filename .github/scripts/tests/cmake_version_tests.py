@@ -36,7 +36,7 @@ class CMakeVersionTests(ScaffoldFixture):
     def test_invalid_or_unsupported_version_preserves_existing_output(self):
         self.scaffold()
         original = ProjectWorkspace.snapshot(self.project)
-        for version in ("3.5", "3.20", "3.21", "3.23", "2.8", "999.0", "3", "3.21.x", "03.21", "3.21;bad"):
+        for version in ("3.5", "3.20", "3.21", "3.23", "2.8", "999.0", "3.99", "4.99", "3", "3.21.x", "03.21", "3.21;bad"):
             with self.subTest(version=version):
                 self.scaffold(cmake_version=version, force=True, success=False)
                 self.assertEqual(ProjectWorkspace.snapshot(self.project), original)

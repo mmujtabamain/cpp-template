@@ -67,18 +67,20 @@ class DevelopmentScriptTests(ScaffoldFixture):
         if IS_WINDOWS:
             probe.write_text(
                 "@echo off\n"
+                "if defined VCPKG_DEFAULT_BINARY_CACHE exit /b 2\n"
                 "(echo %VCPKG_BINARY_SOURCES%&echo %X_VCPKG_ASSET_SOURCES%&echo %VCPKG_DOWNLOADS%)>cache-settings.txt\n"
                 "exit /b 1\n"
             )
         else:
             probe.write_text(
                 "#!/bin/sh\n"
+                'if [ "${VCPKG_DEFAULT_BINARY_CACHE+x}" = x ]; then exit 2; fi\n'
                 "printf '%s\\n' \"$VCPKG_BINARY_SOURCES\" \"$X_VCPKG_ASSET_SOURCES\" \"$VCPKG_DOWNLOADS\" > cache-settings.txt\n"
                 "exit 1\n"
             )
             probe.chmod(0o755)
         environment = dict(os.environ)
-        for name in ("VCPKG_BINARY_SOURCES", "X_VCPKG_ASSET_SOURCES", "VCPKG_DOWNLOADS"):
+        for name in ("VCPKG_BINARY_SOURCES", "X_VCPKG_ASSET_SOURCES", "VCPKG_DOWNLOADS", "VCPKG_DEFAULT_BINARY_CACHE"):
             environment[name] = "inherited-cache"
         result = CommandRunner.run(
             [

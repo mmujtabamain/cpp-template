@@ -111,7 +111,7 @@ and checked before rendering or replacing any project files:
 | 20 | 3.21 | Actual 3.21.4 runtime with the same build and consumer checks. |
 | 23 | 3.24 | Actual 3.24.3 and 4.4.2 runtimes with the same build and consumer checks. |
 
-Only these standards and CMake major versions 3 and 4 are accepted. Each CMake
+Only these standards and the listed CMake series (3.8–3.31 and 4.0–4.4) are accepted. Each CMake
 version must meet the selected standard's floor and must not exceed the CMake
 running the scaffold. For example, C++23/CMake 3.8 is rejected; C++14/CMake 3.8 is
 accepted. Actual compiler support for the selected standard is still required.

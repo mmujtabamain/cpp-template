@@ -32,6 +32,7 @@ if(SETUP_CLEAN)
     # These environment changes apply only to this setup process and its children.
     set(ENV{VCPKG_DOWNLOADS} "${VCPKG_ROOT}/downloads")
     set(ENV{VCPKG_BINARY_SOURCES} "clear")
+    unset(ENV{VCPKG_DEFAULT_BINARY_CACHE})
     set(ENV{X_VCPKG_ASSET_SOURCES} "clear")
 endif()
 set(SETUP_RECOVERY "Run setup.sh --clean (Windows: setup.bat --clean) to clone and set up again. Warning: this deletes external/vcpkg, vcpkg_installed, and build, including local changes.")
