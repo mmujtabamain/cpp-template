@@ -8,6 +8,26 @@ cmake_minimum_required(VERSION 3.24)
 # get PROJECT_ROOT
 get_filename_component(PROJECT_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 
+# Explicit recovery only: ordinary setup always reuses local dependencies.
+# Also allow: cmake -P scripts/setup.cmake --clean
+foreach(ARGUMENT_INDEX RANGE 0 ${CMAKE_ARGC})
+    if("${CMAKE_ARGV${ARGUMENT_INDEX}}" STREQUAL "--clean")
+        set(SETUP_CLEAN ON)
+    endif()
+endforeach()
+set(VCPKG_ROOT "${PROJECT_ROOT}/external/vcpkg")
+if(SETUP_CLEAN)
+    message(WARNING "Clean setup deletes external/vcpkg, vcpkg_installed, and build, including local changes in those directories.")
+    foreach(CLEAN_PATH "${VCPKG_ROOT}" "${PROJECT_ROOT}/vcpkg_installed" "${PROJECT_ROOT}/build")
+        if(IS_SYMLINK "${CLEAN_PATH}")
+            file(REMOVE "${CLEAN_PATH}")
+        else()
+            file(REMOVE_RECURSE "${CLEAN_PATH}")
+        endif()
+    endforeach()
+endif()
+set(SETUP_RECOVERY "Run setup.sh --clean (Windows: setup.bat --clean) to clone and set up again. Warning: this deletes external/vcpkg, vcpkg_installed, and build, including local changes.")
+
 # MARK: Prerequisites
 
 # Fail early when required tools or generated project metadata are missing.
@@ -24,17 +44,20 @@ include("${CMAKE_CURRENT_LIST_DIR}/development.cmake")
 resolve_development_preset("${DEV_PRESET}" DEV_PRESET)
 
 # MARK: Setup "vcpkg"
-set(VCPKG_ROOT "${PROJECT_ROOT}/external/vcpkg")
 
 # CLONE
 if(NOT EXISTS "${VCPKG_ROOT}")
     file(MAKE_DIRECTORY "${PROJECT_ROOT}/external")
     execute_process(
         COMMAND "${GIT_EXECUTABLE}" clone --depth 1 https://github.com/microsoft/vcpkg.git
-        "${VCPKG_ROOT}" COMMAND_ERROR_IS_FATAL ANY
+        "${VCPKG_ROOT}" RESULT_VARIABLE CLONE_EXIT_CODE
     )
 
-    # TODO: why not remove .git there, why preserving?
+    if(NOT CLONE_EXIT_CODE EQUAL 0)
+        message(FATAL_ERROR "vcpkg clone failed. ${SETUP_RECOVERY}")
+    endif()
+    # Preserve .git: vcpkg uses Git for versioning and registry operations.
+    # Repository metadata cleanup belongs to the user; --clean replaces the whole dependency.
 endif()
 
 # BOOTSTRAP
@@ -51,7 +74,7 @@ if(NOT EXISTS "${VCPKG_EXECUTABLE}")
     if(NOT EXISTS "${VCPKG_BOOTSTRAP_SCRIPT}")
         message(
             FATAL_ERROR
-            "Malformed vcpkg tree at ${VCPKG_ROOT}: missing bootstrap script. Remove that directory manually and rerun setup to obtain a fresh copy."
+            "Malformed vcpkg tree at ${VCPKG_ROOT}: missing bootstrap script. ${SETUP_RECOVERY}"
         )
     endif()
 
@@ -72,7 +95,7 @@ if(NOT EXISTS "${VCPKG_EXECUTABLE}")
     if(NOT BOOTSTRAP_EXIT_CODE EQUAL 0 OR NOT EXISTS "${VCPKG_EXECUTABLE}")
         message(
             FATAL_ERROR
-            "vcpkg bootstrap failed at ${VCPKG_ROOT}. Check its output; remove the directory manually and rerun setup if a fresh copy is needed."
+            "vcpkg bootstrap failed at ${VCPKG_ROOT}. Check its output. ${SETUP_RECOVERY}"
         )
     endif()
 endif()
@@ -86,7 +109,7 @@ if(NOT VCPKG_VERSION_EXIT_CODE EQUAL 0 OR NOT EXISTS
 )
     message(
         FATAL_ERROR
-        "Malformed vcpkg installation at ${VCPKG_ROOT}. Remove it manually and rerun setup for a fresh copy."
+        "Malformed vcpkg installation at ${VCPKG_ROOT}. ${SETUP_RECOVERY}"
     )
 endif()
 
@@ -103,8 +126,11 @@ endif()
 # INSTALL PACKAGES
 execute_process(
     COMMAND "${VCPKG_EXECUTABLE}" ${VCPKG_INSTALL_ARGUMENTS} WORKING_DIRECTORY "${PROJECT_ROOT}"
-    COMMAND_ERROR_IS_FATAL ANY
+    RESULT_VARIABLE INSTALL_EXIT_CODE
 )
+if(NOT INSTALL_EXIT_CODE EQUAL 0)
+    message(FATAL_ERROR "vcpkg installation failed. ${SETUP_RECOVERY}")
+endif()
 
 # MARK: Configure CMake
 

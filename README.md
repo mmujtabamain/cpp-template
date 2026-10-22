@@ -69,7 +69,11 @@ The installer sets the clone's local `core.hooksPath` to `.github/hooks`; it lea
 
 ### Run setup script
 
-Run `setup.sh` afterwards to complete the setup.
+Run `setup.sh` afterwards to complete the setup. Normal setup reuses dependencies
+and build output. To recover from a failed clone/bootstrap, run `./setup.sh --clean`
+(or `setup.bat --clean`). **Warning:** clean setup deletes `external/vcpkg/`,
+`vcpkg_installed/`, and `build/`, including local changes, then clones and sets up
+again. Project source files and the project's Git metadata are preserved.
 
 ## Git
 

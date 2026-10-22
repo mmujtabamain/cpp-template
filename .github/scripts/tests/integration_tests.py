@@ -45,7 +45,7 @@ class IntegrationTests(unittest.TestCase):
         )
         launcher(project, "setup")
         vcpkg_directory = project / "external/vcpkg"
-        self.assertFalse((vcpkg_directory / ".git").exists())
+        self.assertTrue((vcpkg_directory / ".git").is_dir())
         vcpkg_executable = vcpkg_directory / ("vcpkg.exe" if IS_WINDOWS else "vcpkg")
         executable_identity = (
             vcpkg_executable.stat().st_mtime_ns,
@@ -304,5 +304,10 @@ class IntegrationTests(unittest.TestCase):
         # external projects must build without copies of the scaffold machinery
         for path in (".scaffold", "scaffold-here.sh", "scaffold-here.bat"):
             self.assertFalse((library_project / path).exists())
+        launcher(library_project, "run")
+        print("Integration: explicit clean setup and rebuild", flush=True)
+        launcher(library_project, "setup", "--clean")
+        self.assertFalse((library_project / "external/vcpkg/reuse-marker").exists())
+        self.assertTrue((library_project / "external/vcpkg/.git").is_dir())
         launcher(library_project, "run")
         print("Integration checks passed", flush=True)
