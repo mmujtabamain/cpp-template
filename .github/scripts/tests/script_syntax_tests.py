@@ -4,6 +4,7 @@ import ast
 from pathlib import Path
 import re
 import shutil
+import tempfile
 import unittest
 
 import yaml
@@ -77,15 +78,17 @@ class ScriptSyntaxTests(unittest.TestCase):
             for workflow, command, shells in self.workflow_commands()
             if "pwsh" in shells
         )
-        for source, command in commands:
-            with self.subTest(source=source, command=command):
-                CommandRunner.run(
-                    [
-                        "pwsh", "-NoProfile", "-NonInteractive", "-Command",
-                        "$tokens = $null; $errors = $null; "
-                        "[void][System.Management.Automation.Language.Parser]::ParseInput("
-                        "[Console]::In.ReadToEnd(), [ref]$tokens, [ref]$errors); "
-                        "if ($errors.Count) { $errors | Out-String | Write-Error; exit 1 }",
-                    ],
-                    REPOSITORY_ROOT, input=command,
-                )
+        # Hosts may write a startup cache in cwd when the user cache is unwritable.
+        with tempfile.TemporaryDirectory(prefix="cpp-template-pwsh-") as directory:
+            for source, command in commands:
+                with self.subTest(source=source, command=command):
+                    CommandRunner.run(
+                        [
+                            "pwsh", "-NoProfile", "-NonInteractive", "-Command",
+                            "$tokens = $null; $errors = $null; "
+                            "[void][System.Management.Automation.Language.Parser]::ParseInput("
+                            "[Console]::In.ReadToEnd(), [ref]$tokens, [ref]$errors); "
+                            "if ($errors.Count) { $errors | Out-String | Write-Error; exit 1 }",
+                        ],
+                        Path(directory), input=command,
+                    )

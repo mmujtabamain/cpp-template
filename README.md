@@ -57,9 +57,12 @@ Templates and launchers stay in `.scaffold/` for reuse. An external destination 
 
 ### Enable Hooks see [Git hooks](#scaffold-validation-and-generated-project-validation)
 
-Enable the tracked hooks once in each template clone:
+Enable the tracked hooks once in each template clone. On Windows, activate the
+virtual environment with `.venv\Scripts\activate.bat` instead:
 
 ```sh
+python3 -m venv .venv
+. .venv/bin/activate
 python3 -m pip install -r .github/requirements.txt
 python3 .github/install-hooks.py
 ```
@@ -96,7 +99,7 @@ This sets a minimum requirement, rather than downloading or switching local CMak
 | 3.20–3.23 | No | Preset schema 5 needs 3.24; real 3.21.4 configuration also failed to recognize AppleClang C++23. |
 | 3.24–3.30 | Yes | Fast suite with 3.24.3; full lifecycle in CI. |
 | 3.31 | Yes | Fast suite with 3.31.6; full lifecycle in CI. |
-| 4.x | Yes | Fast suite with 4.4.2; latest release tested in CI. |
+| 4.x | Yes | Full lifecycle passed with 4.4.2; latest release covered by CI. |
 
 The floor remains 3.24: shared presets use
 [schema 5](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html),
@@ -111,7 +114,9 @@ vcpkg may acquire newer tools for its own builds.
 The repository CI matrix runs the full lifecycle on macOS and Windows for
 3.24.3, 3.31.6, and the latest release. Local version checks include generation,
 preset parsing, and compiler configuration for both project types; remote CI
-results are separate from these local checks.
+results are separate from these local checks. The full local lifecycle passed
+on 4.4.2, including fresh clone/bootstrap, executable builds, static/shared
+library tests, installed consumers, and an explicit clean setup and rebuild.
 
 ## Git
 
