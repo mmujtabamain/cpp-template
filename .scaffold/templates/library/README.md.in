@@ -1,10 +1,10 @@
 # @PROJECT_DISPLAY_NAME@
 
-Installable C++23 library: `@PROJECT_NAME@::@PROJECT_NAME@`.
+Installable C++@PROJECT_CPP_VERSION@ library: `@PROJECT_NAME@::@PROJECT_NAME@`.
 
 ## Development
 
-Install CMake @PROJECT_CMAKE_VERSION@+, Ninja, Git, and a compiler supporting C++23. On macOS,
+Install CMake @PROJECT_CMAKE_VERSION@+, Ninja, Git, and a compiler supporting C++@PROJECT_CPP_VERSION@. On macOS,
 install the Xcode command line tools. On Windows, install Visual Studio C++
 build tools and run commands from a Developer Command Prompt.
 
@@ -16,17 +16,13 @@ build tools and run commands from a Developer Command Prompt.
 On Windows use `setup.bat` and `run.bat`. Pass `release` to either launcher
 for a release build; debug is the default. Manual builds:
 
-```sh
-cmake --preset debug
-cmake --build --preset debug
-cmake --preset release
-cmake --build --preset release
-```
+@PROJECT_BUILD_GUIDE@
 
 `scaffold` is destructive, one-time project initialization. `setup` is repeatable
 machine setup. `run` configures, builds, and runs the CMake `run` target.
 Another developer cloning this generated project only needs setup and run.
-Setup never removes build output. To clean, remove `build/` yourself.
+Setup without `--clean` reuses dependencies and build output. `--clean` discards
+all setup output and rebuilds dependencies from fresh downloads.
 
 ## Dependencies
 
@@ -35,15 +31,16 @@ is `fmt`. Setup clones the latest vcpkg into ignored `external/vcpkg/`, preserve
 its `.git`, bootstraps it, and installs the manifest into `vcpkg_installed/`.
 Later setup runs reuse that copy. There is no pinned revision or submodule.
 For a fresh clone and setup, run `./setup.sh --clean` (Windows: `setup.bat --clean`).
+Clean setup bypasses binary and asset caches and downloads dependencies again.
 **Warning:** this deletes `external/vcpkg/`, `vcpkg_installed/`, and `build/`,
 including local changes. Source files and the project's `.git` remain intact.
 Use `./setup.sh release --clean` for a clean release setup.
 
 Dependency installation belongs to setup; run does not install dependencies.
-Presets disable vcpkg's automatic manifest installation for this reason.
+Development configuration disables vcpkg's automatic manifest installation.
 vcpkg chooses its native triplet. To override it, set `VCPKG_DEFAULT_TRIPLET`
 in your environment before setup and keep it set during configuration and run.
-Custom presets must use the same triplet and `VCPKG_INSTALLED_DIR` as setup.
+Custom configurations must use the same triplet and `VCPKG_INSTALLED_DIR` as setup.
 
 @PROJECT_GIT_GUIDE@
 
@@ -66,13 +63,16 @@ project. Consumers using `add_subdirectory()` get the library alone; override
 `@PROJECT_MACRO@_BUILD_EXAMPLES` and `@PROJECT_MACRO@_BUILD_TESTS` as needed.
 
 ```sh
-cmake --build --preset debug
-ctest --preset debug
+cd build/debug
+cmake --build . --config Debug
+ctest --output-on-failure -C Debug
 # Static is the default. Switch to shared (a DLL on Windows):
-cmake --preset debug -DBUILD_SHARED_LIBS=ON
-cmake --build --preset debug
-ctest --preset debug
-cmake --install build/debug --prefix /path/to/install --config Debug
+cmake -DBUILD_SHARED_LIBS=ON ../..
+cmake --build . --config Debug
+ctest --output-on-failure -C Debug
+cmake -DCMAKE_INSTALL_PREFIX=/path/to/install ../..
+cmake --build . --target install --config Debug
+cd ../..
 ```
 
 Switch back with `-DBUILD_SHARED_LIBS=OFF`. Install a release build by replacing

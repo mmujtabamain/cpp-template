@@ -3,7 +3,7 @@
 setlocal DisableDelayedExpansion
 
 if "%~1"=="" (
-    echo Usage: scaffold.bat ^<location^> [project-name] [exec^|library] [--force] [--no-git] [--cmake-version VERSION] 1>&2
+    echo Usage: scaffold.bat ^<location^> [project-name] [exec^|library] [--force] [--no-git] [--cmake-version VERSION] [--cpp-version STANDARD] 1>&2
     exit /b 1
 )
 
@@ -25,6 +25,7 @@ rem get --force and --no-git flags
 set "force_replacement=OFF"
 set "generate_git=ON"
 set "project_cmake_version="
+set "project_cpp_version="
 
 rem = loop over all arguments
 :read_option
@@ -36,6 +37,13 @@ if "%~1"=="--force" (
     set "force_replacement=ON"
 ) else if "%~1"=="--no-git" (
     set "generate_git=OFF"
+) else if "%~1"=="--cpp-version" (
+    if "%~2"=="" (
+        echo --cpp-version requires a standard 1>&2
+        exit /b 1
+    )
+    set "project_cpp_version=%~2"
+    shift
 ) else if "%~1"=="--cmake-version" (
     if "%~2"=="" (
         echo --cmake-version requires a version 1>&2
@@ -67,6 +75,7 @@ cmake ^
     "-DSCAFFOLD_FORCE=%force_replacement%" ^
     "-DSCAFFOLD_GIT=%generate_git%" ^
     "-DPROJECT_CMAKE_VERSION=%project_cmake_version%" ^
+    "-DPROJECT_CPP_VERSION=%project_cpp_version%" ^
     -P "%~dp0scripts\scaffold.cmake"
 
 exit /b %errorlevel%

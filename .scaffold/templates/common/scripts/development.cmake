@@ -16,7 +16,7 @@ endfunction()
 
 # MARK: Configure arguments
 function(make_development_configure_arguments PRESET OUTPUT_VARIABLE)
-    set(CONFIGURE_ARGUMENTS --preset "${PRESET}")
+    @PROJECT_CONFIGURE_ARGUMENTS@
 
     # Use the same triplet for manifest installation and CMake builds
     if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT "$ENV{VCPKG_DEFAULT_TRIPLET}" STREQUAL "")
@@ -24,4 +24,18 @@ function(make_development_configure_arguments PRESET OUTPUT_VARIABLE)
     endif()
 
     set(${OUTPUT_VARIABLE} "${CONFIGURE_ARGUMENTS}" PARENT_SCOPE)
+endfunction()
+
+# Configure the generated project in its selected build directory.
+function(configure_development_project PRESET)
+    make_development_configure_arguments("${PRESET}" CONFIGURE_ARGUMENTS)
+    set(CONFIGURE_DIRECTORY "@PROJECT_CONFIGURE_DIRECTORY@")
+    file(MAKE_DIRECTORY "${CONFIGURE_DIRECTORY}")
+    execute_process(
+        COMMAND "${CMAKE_COMMAND}" ${CONFIGURE_ARGUMENTS}
+        WORKING_DIRECTORY "${CONFIGURE_DIRECTORY}" RESULT_VARIABLE CONFIGURE_EXIT_CODE
+    )
+    if(NOT CONFIGURE_EXIT_CODE EQUAL 0)
+        message(FATAL_ERROR "CMake configuration failed (${CONFIGURE_EXIT_CODE}).")
+    endif()
 endfunction()

@@ -75,7 +75,7 @@ class ScaffoldGenerationTests(ScaffoldFixture):
                         ).read_text()
                         self.assertIn("@PACKAGE_INIT@", package_config)
                         self.assertIn(
-                            "find_dependency(fmt CONFIG REQUIRED)", package_config
+                            "find_dependency(fmt)", package_config
                         )
                         self.assertIn(
                             f"{target_name}::{target_name}",

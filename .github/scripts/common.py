@@ -100,10 +100,12 @@ def scaffold(
     destination=None,
     git=True,
     cmake_version=None,
+    cpp_version=None,
+    cmake_executable="cmake",
 ) -> subprocess.CompletedProcess:
     """Exercise shared CMake validation and destructive-replacement confirmation."""
     arguments = [
-        "cmake",
+        cmake_executable,
         f"-DSCAFFOLD_DESTINATION={destination or project}",
         f"-DSCAFFOLD_GIT={'ON' if git else 'OFF'}",
         f"-DPROJECT_DISPLAY_NAME={name}",
@@ -111,6 +113,8 @@ def scaffold(
     ]
     if cmake_version is not None:
         arguments.append(f"-DPROJECT_CMAKE_VERSION={cmake_version}")
+    if cpp_version is not None:
+        arguments.append(f"-DPROJECT_CPP_VERSION={cpp_version}")
     if force:
         arguments.append("-DSCAFFOLD_FORCE=ON")
     return CommandRunner.run(
@@ -121,7 +125,7 @@ def scaffold(
     )
 
 
-def launcher(project, name, *arguments, input="") -> subprocess.CompletedProcess:
+def launcher(project, name, *arguments, input="", environment=None) -> subprocess.CompletedProcess:
     """Exercise the native shell or Batch entry point on this host."""
     if name == "scaffold":
         name = "scaffold-here"
@@ -129,4 +133,4 @@ def launcher(project, name, *arguments, input="") -> subprocess.CompletedProcess
         invocation = ["cmd", "/c", str(project / (name + ".bat")), *arguments]
     else:
         invocation = [project / (name + ".sh"), *arguments]
-    return CommandRunner.run(invocation, project, input=input)
+    return CommandRunner.run(invocation, project, input=input, environment=environment)

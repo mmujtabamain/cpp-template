@@ -5,7 +5,6 @@ foreach(
     REQUIRED_PATH
     ${TYPE_REQUIRED_PATHS}
     CMakeLists.txt
-    CMakePresets.json
     vcpkg.json
     README.md
     scripts/setup.cmake
@@ -35,7 +34,14 @@ if(SCAFFOLD_GIT)
         endif()
     endforeach()
 endif()
-foreach(JSON_FILENAME CMakePresets.json vcpkg.json)
+set(JSON_FILENAMES vcpkg.json)
+if(PROJECT_USE_PRESETS)
+    list(APPEND JSON_FILENAMES CMakePresets.json)
+    if(NOT EXISTS "${STAGING_DIRECTORY}/CMakePresets.json")
+        message(FATAL_ERROR "Incomplete staged project: missing CMakePresets.json. Existing project is untouched.")
+    endif()
+endif()
+foreach(JSON_FILENAME IN LISTS JSON_FILENAMES)
     file(READ "${STAGING_DIRECTORY}/${JSON_FILENAME}" JSON_CONTENT)
     string(JSON JSON_VALUE_TYPE ERROR_VARIABLE JSON_ERROR TYPE "${JSON_CONTENT}")
     if(NOT JSON_ERROR STREQUAL "NOTFOUND" OR NOT JSON_VALUE_TYPE STREQUAL "OBJECT")

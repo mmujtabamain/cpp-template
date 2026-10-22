@@ -43,11 +43,40 @@ jobs:
         if: failure()
         run: echo "::warning::Template validation failed. Fix failures before merging into main."
 
+  compatibility:
+    name: Generated C++ standards (CMake ${{ matrix.cmake }})
+    continue-on-error: ${{ !(github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event.merge_group.base_ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        cmake: ["3.8.2", "3.21.4", "3.24.3", "latest"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install scaffold driver
+        run: python -m pip install "cmake>=3.24"
+      - name: Save scaffold driver path
+        run: python -c "import cmake, os; print('SCAFFOLD_DRIVER_CMAKE=' + os.path.join(cmake.CMAKE_BIN_DIR, 'cmake'))" >> "$GITHUB_ENV"
+      - name: Build real fmt for the compatibility checks
+        run: |
+          git clone --depth 1 --branch 11.1.4 https://github.com/fmtlib/fmt.git "$RUNNER_TEMP/fmt"
+          cmake -S "$RUNNER_TEMP/fmt" -B "$RUNNER_TEMP/fmt-build" -G Ninja -DFMT_TEST=OFF -DFMT_DOC=OFF -DCMAKE_CXX_STANDARD=11 -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/fmt-prefix"
+          cmake --build "$RUNNER_TEMP/fmt-build" --target install
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '${{ matrix.cmake }}'
+      - name: Build allowed C++ combinations with the selected runtime
+        run: python .github/check-compatibility.py --driver "$SCAFFOLD_DRIVER_CMAKE" --cmake "$(command -v cmake)" --fmt-prefix "$RUNNER_TEMP/fmt-prefix"
+
   required-validation:
     # Keep this name stable: the main ruleset requires this exact status check.
     name: Required validation
     if: always()
-    needs: validation
+    needs: [validation, compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 2
 
@@ -55,9 +84,10 @@ jobs:
       - name: Enforce main branch validation
         env:
           VALIDATION_RESULT: ${{ needs.validation.result }}
+          COMPATIBILITY_RESULT: ${{ needs.compatibility.result }}
           REQUIRE_SUCCESS: ${{ github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event.merge_group.base_ref == 'refs/heads/main' }}
         run: |
-          if [ "$VALIDATION_RESULT" != success ]; then
+          if [ "$VALIDATION_RESULT" != success ] || [ "$COMPATIBILITY_RESULT" != success ]; then
             if [ "$REQUIRE_SUCCESS" = true ]; then
               echo "::error::All platform validation jobs must pass before merging into main."
               exit 1

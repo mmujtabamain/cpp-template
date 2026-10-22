@@ -1,4 +1,4 @@
-import shutil
+import os
 
 from ..common import IS_WINDOWS, CommandRunner, ScaffoldFixture, scaffold
 
@@ -63,12 +63,33 @@ class DevelopmentScriptTests(ScaffoldFixture):
         metadata.mkdir()
         (metadata / "keep").write_text("project history")
         (self.project / "notes.txt").write_text("user file")
+        probe = self.project / ("git-probe.bat" if IS_WINDOWS else "git-probe.sh")
+        if IS_WINDOWS:
+            probe.write_text(
+                "@echo off\n"
+                "(echo %VCPKG_BINARY_SOURCES%&echo %X_VCPKG_ASSET_SOURCES%&echo %VCPKG_DOWNLOADS%)>cache-settings.txt\n"
+                "exit /b 1\n"
+            )
+        else:
+            probe.write_text(
+                "#!/bin/sh\n"
+                "printf '%s\\n' \"$VCPKG_BINARY_SOURCES\" \"$X_VCPKG_ASSET_SOURCES\" \"$VCPKG_DOWNLOADS\" > cache-settings.txt\n"
+                "exit 1\n"
+            )
+            probe.chmod(0o755)
+        environment = dict(os.environ)
+        for name in ("VCPKG_BINARY_SOURCES", "X_VCPKG_ASSET_SOURCES", "VCPKG_DOWNLOADS"):
+            environment[name] = "inherited-cache"
         result = CommandRunner.run(
             [
-                "cmake", f"-DGIT_EXECUTABLE={shutil.which('cmake')}",
+                "cmake", f"-DGIT_EXECUTABLE={probe}",
                 "-P", self.project / "scripts/setup.cmake", "--clean",
             ],
-            self.project, success=False,
+            self.project, success=False, environment=environment,
+        )
+        self.assertEqual(
+            (self.project / "cache-settings.txt").read_text().splitlines(),
+            ["clear", "clear", (self.project / "external/vcpkg/downloads").as_posix()],
         )
         self.assertIn("Clean setup deletes", result.stdout)
         self.assertIn("vcpkg clone failed", result.stdout)

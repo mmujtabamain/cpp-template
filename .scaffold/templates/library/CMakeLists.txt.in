@@ -7,9 +7,18 @@ project(@PROJECT_NAME@ VERSION 0.1.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(GenerateExportHeader)
+set(CMAKE_CXX_STANDARD @PROJECT_CPP_VERSION@)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(fmt CONFIG REQUIRED)
 
 # MARK: Build options
+
+# Enable development targets when this library is the top-level project.
+set(PROJECT_IS_TOP_LEVEL OFF)
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    set(PROJECT_IS_TOP_LEVEL ON)
+endif()
 
 # Let add_library select static or shared; development targets default off for consumers.
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
@@ -21,7 +30,7 @@ option(@PROJECT_MACRO@_BUILD_TESTS "Build @PROJECT_NAME@ tests" ${PROJECT_IS_TOP
 # Expose the same namespaced target spelling in both build and install trees.
 add_library(@PROJECT_NAME@ src/@PROJECT_NAMESPACE@.cpp)
 add_library(@PROJECT_NAME@::@PROJECT_NAME@ ALIAS @PROJECT_NAME@)
-target_compile_features(@PROJECT_NAME@ PUBLIC cxx_std_23)
+target_compile_features(@PROJECT_NAME@ PUBLIC @PROJECT_CPP_FEATURE@)
 set_target_properties(
     @PROJECT_NAME@
     PROPERTIES CXX_EXTENSIONS OFF
@@ -73,7 +82,7 @@ if(@PROJECT_MACRO@_BUILD_EXAMPLES)
         run
         COMMAND $<TARGET_FILE:@PROJECT_NAME@_example>
         DEPENDS @PROJECT_NAME@_example
-        WORKING_DIRECTORY "$<TARGET_FILE_DIR:@PROJECT_NAME@_example>"
+        WORKING_DIRECTORY "@PROJECT_LIBRARY_RUN_DIRECTORY@"
         USES_TERMINAL VERBATIM
     )
 elseif(PROJECT_IS_TOP_LEVEL)

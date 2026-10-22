@@ -17,24 +17,35 @@ foreach(ARGUMENT_INDEX RANGE 0 ${CMAKE_ARGC})
 endforeach()
 set(VCPKG_ROOT "${PROJECT_ROOT}/external/vcpkg")
 if(SETUP_CLEAN)
-    message(WARNING "Clean setup deletes external/vcpkg, vcpkg_installed, and build, including local changes in those directories.")
+    message(WARNING "Clean setup deletes external/vcpkg, vcpkg_installed, and build, including local changes in those directories. Cached packages and assets will not be reused.")
     foreach(CLEAN_PATH "${VCPKG_ROOT}" "${PROJECT_ROOT}/vcpkg_installed" "${PROJECT_ROOT}/build")
         if(IS_SYMLINK "${CLEAN_PATH}")
             file(REMOVE "${CLEAN_PATH}")
         else()
             file(REMOVE_RECURSE "${CLEAN_PATH}")
         endif()
+        if(EXISTS "${CLEAN_PATH}" OR IS_SYMLINK "${CLEAN_PATH}")
+            message(FATAL_ERROR "Clean setup could not remove ${CLEAN_PATH}; setup stopped.")
+        endif()
     endforeach()
+    # Fresh downloads and source builds, regardless of inherited cache settings.
+    # These environment changes apply only to this setup process and its children.
+    set(ENV{VCPKG_DOWNLOADS} "${VCPKG_ROOT}/downloads")
+    set(ENV{VCPKG_BINARY_SOURCES} "clear")
+    set(ENV{X_VCPKG_ASSET_SOURCES} "clear")
 endif()
 set(SETUP_RECOVERY "Run setup.sh --clean (Windows: setup.bat --clean) to clone and set up again. Warning: this deletes external/vcpkg, vcpkg_installed, and build, including local changes.")
 
 # MARK: Prerequisites
 
 # Fail early when required tools or generated project metadata are missing.
-find_program(GIT_EXECUTABLE git REQUIRED)
-find_program(NINJA_EXECUTABLE ninja REQUIRED)
+find_program(GIT_EXECUTABLE git)
+find_program(NINJA_EXECUTABLE ninja)
+if(NOT GIT_EXECUTABLE OR NOT NINJA_EXECUTABLE)
+    message(FATAL_ERROR "Git and Ninja are required for setup.")
+endif()
 
-if(NOT EXISTS "${PROJECT_ROOT}/vcpkg.json" OR NOT EXISTS "${PROJECT_ROOT}/CMakePresets.json")
+if(NOT EXISTS "${PROJECT_ROOT}/vcpkg.json" OR NOT EXISTS "${PROJECT_ROOT}/CMakeLists.txt")
     message(FATAL_ERROR "Missing generated project files. Run scaffold first.")
 endif()
 
@@ -134,9 +145,4 @@ endif()
 
 # MARK: Configure CMake
 
-# make configure args; -DVCPKG_TARGET_TRIPLET etc.
-make_development_configure_arguments("${DEV_PRESET}" CONFIGURE_ARGUMENTS)
-execute_process(
-    COMMAND "${CMAKE_COMMAND}" ${CONFIGURE_ARGUMENTS} WORKING_DIRECTORY "${PROJECT_ROOT}"
-    COMMAND_ERROR_IS_FATAL ANY
-) # configure cmake project
+configure_development_project("${DEV_PRESET}")

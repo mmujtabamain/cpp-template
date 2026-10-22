@@ -14,14 +14,11 @@ include("${CMAKE_CURRENT_LIST_DIR}/development.cmake")
 # get preset; debug or release
 resolve_development_preset("${DEV_PRESET}" DEV_PRESET)
 
-# get arguments; -DVCPKG_TARGET_TRIPLET etc.
-make_development_configure_arguments("${DEV_PRESET}" CONFIGURE_ARGUMENTS)
-
+configure_development_project("${DEV_PRESET}")
 execute_process(
-    COMMAND "${CMAKE_COMMAND}" ${CONFIGURE_ARGUMENTS} WORKING_DIRECTORY "${PROJECT_ROOT}"
-    COMMAND_ERROR_IS_FATAL ANY
-) # set working directory
-execute_process(
-    COMMAND "${CMAKE_COMMAND}" --build --preset "${DEV_PRESET}" --target run
-    WORKING_DIRECTORY "${PROJECT_ROOT}" COMMAND_ERROR_IS_FATAL ANY
-) # builds and runs the project
+    COMMAND "${CMAKE_COMMAND}" --build "${PROJECT_ROOT}/build/${DEV_PRESET}" --target run
+    WORKING_DIRECTORY "${PROJECT_ROOT}" RESULT_VARIABLE BUILD_EXIT_CODE
+)
+if(NOT BUILD_EXIT_CODE EQUAL 0)
+    message(FATAL_ERROR "Build/run failed (${BUILD_EXIT_CODE}).")
+endif()

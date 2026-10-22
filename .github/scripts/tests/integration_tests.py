@@ -306,7 +306,15 @@ class IntegrationTests(unittest.TestCase):
             self.assertFalse((library_project / path).exists())
         launcher(library_project, "run")
         print("Integration: explicit clean setup and rebuild", flush=True)
-        launcher(library_project, "setup", "--clean")
+        environment = dict(os.environ)
+        environment["VCPKG_BINARY_SOURCES"] = "invalid-inherited-provider"
+        environment["X_VCPKG_ASSET_SOURCES"] = "clear;x-block-origin"
+        inherited_downloads = workspace / "shared-downloads"
+        inherited_downloads.mkdir()
+        (inherited_downloads / "keep").write_text("shared cache")
+        environment["VCPKG_DOWNLOADS"] = str(inherited_downloads)
+        launcher(library_project, "setup", "--clean", environment=environment)
+        self.assertEqual((inherited_downloads / "keep").read_text(), "shared cache")
         self.assertFalse((library_project / "external/vcpkg/reuse-marker").exists())
         self.assertTrue((library_project / "external/vcpkg/.git").is_dir())
         launcher(library_project, "run")

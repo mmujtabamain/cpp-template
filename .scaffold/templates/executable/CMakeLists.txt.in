@@ -4,14 +4,17 @@
 
 cmake_minimum_required(VERSION @PROJECT_CMAKE_VERSION@)
 project(@PROJECT_NAME@ VERSION 0.1.0 LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD @PROJECT_CPP_VERSION@)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(fmt CONFIG REQUIRED)
 
 # MARK: Source discovery and executable target
 
-# Discover nested implementation files and reconfigure when files are added or removed.
-file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+# Discover implementation files in the new project.
+file(GLOB_RECURSE PROJECT_SOURCES @PROJECT_SOURCE_DISCOVERY_OPTION@"${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 add_executable(@PROJECT_NAME@ ${PROJECT_SOURCES})
-target_compile_features(@PROJECT_NAME@ PRIVATE cxx_std_23)
+target_compile_features(@PROJECT_NAME@ PRIVATE @PROJECT_CPP_FEATURE@)
 set_target_properties(@PROJECT_NAME@ PROPERTIES CXX_EXTENSIONS OFF)
 
 # Keep includes relative to src/, for example "util/strings.hpp".
@@ -39,6 +42,6 @@ add_custom_target(
     run
     COMMAND $<TARGET_FILE:@PROJECT_NAME@>
     DEPENDS @PROJECT_NAME@
-    WORKING_DIRECTORY "$<TARGET_FILE_DIR:@PROJECT_NAME@>"
+    WORKING_DIRECTORY "@PROJECT_EXECUTABLE_RUN_DIRECTORY@"
     USES_TERMINAL VERBATIM
 )

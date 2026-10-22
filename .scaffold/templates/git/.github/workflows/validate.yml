@@ -22,11 +22,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: jwlawson/actions-setup-cmake@v2
         with:
-          python-version: '3.x'
-      - name: Install selected CMake series
-        run: python -m pip install "cmake~=@PROJECT_CMAKE_VERSION@"
+          cmake-version: '@PROJECT_CMAKE_VERSION@'
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - name: Setup on macOS
@@ -36,10 +34,11 @@ jobs:
         if: runner.os == 'Windows'
         run: .\setup.bat
       - name: Build
-        run: cmake --build --preset debug
+        run: cmake --build build/debug --config Debug
       - name: Run library tests
         if: ${{ '@PROJECT_TYPE@' == 'library' }}
-        run: ctest --preset debug
+        working-directory: build/debug
+        run: ctest --output-on-failure -C Debug
       - name: Warn about failed validation
         if: failure()
         run: echo "::warning::Project validation failed. Fix failures before merging into main."

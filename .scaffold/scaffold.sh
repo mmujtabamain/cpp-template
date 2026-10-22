@@ -3,7 +3,7 @@
 set -eu
 
 if [ "$#" -lt 1 ] || [ -z "$1" ]; then
-    echo "Usage: $0 <location> [project-name] [exec|library] [--force] [--no-git] [--cmake-version VERSION]" >&2
+    echo "Usage: $0 <location> [project-name] [exec|library] [--force] [--no-git] [--cmake-version VERSION] [--cpp-version STANDARD]" >&2
     exit 1
 fi
 
@@ -28,10 +28,18 @@ if [ "$#" -gt 0 ]; then shift; fi
 force_replacement=OFF
 generate_git=ON
 project_cmake_version=
+project_cpp_version=
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --force) force_replacement=ON ;;
         --no-git) generate_git=OFF ;;
+        --cpp-version)
+            if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+                echo "--cpp-version requires a standard" >&2; exit 1
+            fi
+            project_cpp_version=$2
+            shift
+            ;;
         --cmake-version)
             if [ "$#" -lt 2 ] || [ -z "$2" ]; then
                 echo "--cmake-version requires a version" >&2; exit 1
@@ -65,4 +73,5 @@ exec cmake \
     "-DSCAFFOLD_FORCE=$force_replacement" \
     "-DSCAFFOLD_GIT=$generate_git" \
     "-DPROJECT_CMAKE_VERSION=$project_cmake_version" \
+    "-DPROJECT_CPP_VERSION=$project_cpp_version" \
     -P "$scaffold_root/scripts/scaffold.cmake"

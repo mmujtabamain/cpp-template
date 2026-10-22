@@ -1,0 +1,38 @@
+{
+  "scaffoldCmakeMinimum": "3.24",
+  "cmakeMajorVersions": [
+    3,
+    4
+  ],
+  "presets": {
+    "cmakeMinimum": "3.21",
+    "schema": 3
+  },
+  "cppStandards": [
+    {
+      "standard": 11,
+      "cmakeMinimum": "3.8"
+    },
+    {
+      "standard": 14,
+      "cmakeMinimum": "3.8"
+    },
+    {
+      "standard": 17,
+      "cmakeMinimum": "3.8"
+    },
+    {
+      "standard": 20,
+      "cmakeMinimum": "3.21"
+    },
+    {
+      "standard": 23,
+      "cmakeMinimum": "3.24"
+    }
+  ],
+  "dependencies": {
+    "vcpkgToolchainCmakeMinimum": "3.7.2",
+    "compileFeatureMetaCmakeMinimum": "3.8",
+    "fmtCppMinimum": 11
+  }
+}

@@ -1,6 +1,6 @@
 # cpp-template
 
-Generate an executable or an installable static/shared C++23 library from this repository template.
+Generate an executable or an installable static/shared C++ library from this repository template.
 
 | OS      | Support           | Build CI |
 | ------- | ----------------- | -------- |
@@ -10,7 +10,7 @@ Generate an executable or an installable static/shared C++23 library from this r
 
 # Prerequisites
 
-CMake 3.24+, Ninja, Git, Python 3 for scaffold validation, and a C++23 compiler (Xcode command line tools on macOS; Visual Studio C++ tools and a Developer Command Prompt on Windows; GCC or Clang on Linux).
+CMake 3.24+ to run the scaffold, Ninja, Git, Python 3 for scaffold validation, and a compiler for the selected C++ standard (C++23 by default) (Xcode command line tools on macOS; Visual Studio C++ tools and a Developer Command Prompt on Windows; GCC or Clang on Linux).
 
 **macOS** - with [Homebrew](https://brew.sh/) installed:
 
@@ -73,50 +73,70 @@ The installer sets the clone's local `core.hooksPath` to `.github/hooks`; it lea
 
 ### Run setup script
 
-Run `setup.sh` afterwards to complete the setup. Normal setup reuses dependencies
-and build output. To recover from a failed clone/bootstrap, run `./setup.sh --clean`
-(or `setup.bat --clean`). **Warning:** clean setup deletes `external/vcpkg/`,
-`vcpkg_installed/`, and `build/`, including local changes, then clones and sets up
-again. Project source files and the project's Git metadata are preserved.
+Run `setup.sh` afterwards to complete setup.
 
-## CMake compatibility
+- `./setup.sh` reuses the existing vcpkg clone, installed dependencies, and build output.
+- `./setup.sh --clean` starts setup from scratch: it deletes `external/vcpkg/`,
+  `vcpkg_installed/`, and `build/`, clones vcpkg again, downloads dependencies
+  again, and rebuilds them from source. Binary and asset cache providers are
+  disabled for that run, including inherited cache settings. On Windows use
+  `setup.bat --clean`.
 
-The generated minimum defaults to the CMake executing the scaffold (the version
-shown by `cmake --version`). Select an older supported minimum explicitly:
+**Warning:** `--clean` discards local changes in those three directories. It
+resets setup state; project sources and the project's `.git` are inputs and stay
+intact. Shared caches are bypassed rather than deleted, so other projects are
+unaffected. Cleanup must complete before cloning or setup stops with an error.
+
+## C++ and CMake compatibility
+
+Select both versions when scaffolding:
 
 ```sh
-./scaffold-here.sh "SampleRuntime" exec --cmake-version 3.24
+./scaffold-here.sh "SampleRuntime" exec --cpp-version 14 --cmake-version 3.8
 ```
 
-`major.minor` and `major.minor.patch` are accepted. The value is written to
-`CMakeLists.txt`, setup/run scripts, preset metadata, and generated CI. A requested
-version newer than the running CMake is rejected; install that version first.
-This sets a minimum requirement, rather than downloading or switching local CMake.
+C++ defaults to **23**. The generated CMake minimum defaults to the version shown
+by `cmake --version` when scaffolding. `major.minor` and `major.minor.patch` are
+accepted. This selects requirements for the new project; it does not install a
+compiler or switch your local CMake executable.
 
-| CMake version | Supported | Verification |
+Allowed pairs are stored in [`.scaffold/compatibility.json`](.scaffold/compatibility.json)
+and checked before rendering or replacing any project files:
+
+| C++ standard | Minimum generated CMake | Verification |
 | --- | --- | --- |
-| 3.5–3.19 | No | Missing C++23 compile features and current preset support. |
-| 3.20–3.23 | No | Preset schema 5 needs 3.24; real 3.21.4 configuration also failed to recognize AppleClang C++23. |
-| 3.24–3.30 | Yes | Fast suite with 3.24.3; full lifecycle in CI. |
-| 3.31 | Yes | Fast suite with 3.31.6; full lifecycle in CI. |
-| 4.x | Yes | Full lifecycle passed with 4.4.2; latest release covered by CI. |
+| 11 | 3.8 | Actual 3.8.2 runtime: executable, static/shared libraries, tests and installed consumers. |
+| 14 | 3.8 | Actual 3.8.2 runtime: executable, static/shared libraries, tests and installed consumers. |
+| 17 | 3.8 | Actual 3.8.2 runtime: executable, static/shared libraries, tests and installed consumers. |
+| 20 | 3.21 | Actual 3.21.4 runtime with the same build and consumer checks. |
+| 23 | 3.24 | Actual 3.24.3 and 4.4.2 runtimes with the same build and consumer checks. |
 
-The floor remains 3.24: shared presets use
-[schema 5](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html),
-which requires 3.24. Although general
-[C++23 compile features](https://cmake.org/cmake/help/latest/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html)
-were introduced in 3.20, compiler support differs. Testing CMake 3.21.4 with
-AppleClang 21 failed on `cxx_std_23`; 3.24.3 configured both project types.
-Supporting 3.5 would require different project templates. The scaffold also
-requires 3.24+. Compiler and third-party package requirements remain separate;
-vcpkg may acquire newer tools for its own builds.
+Only these standards and CMake major versions 3 and 4 are accepted. Each CMake
+version must meet the selected standard's floor and must not exceed the CMake
+running the scaffold. For example, C++23/CMake 3.8 is rejected; C++14/CMake 3.8 is
+accepted. Actual compiler support for the selected standard is still required.
 
-The repository CI matrix runs the full lifecycle on macOS and Windows for
-3.24.3, 3.31.6, and the latest release. Local version checks include generation,
-preset parsing, and compiler configuration for both project types; remote CI
-results are separate from these local checks. The full local lifecycle passed
-on 4.4.2, including fresh clone/bootstrap, executable builds, static/shared
-library tests, installed consumers, and an explicit clean setup and rebuild.
+The **generated-project floor is now 3.8**. CMake 3.5 cannot express the standard
+[standard meta-features](https://cmake.org/cmake/help/latest/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html)
+used by the library's public interface, and the current
+[vcpkg toolchain](https://github.com/microsoft/vcpkg/blob/master/scripts/buildsystems/vcpkg.cmake)
+itself requires at least 3.7.2. C++20 uses the verified 3.21 floor;
+C++23 retains 3.24 for supported-platform compiler recognition. The scaffold
+program itself requires 3.24+; generating a project and building that project
+are separate operations.
+
+Projects targeting CMake 3.21+ receive shared presets (schema 3). Earlier targets
+receive direct configure/build commands and no `CMakePresets.json`. The generator
+writes the commands appropriate to the chosen pair once; generated projects have
+no CMake-version fallback branches. Documentation for the direct commands lives
+in `build-cmake-legacy.md`, where “legacy” refers to the CMake version.
+
+The repository CI runs the full vcpkg lifecycle on macOS and Windows. A separate
+runtime matrix builds all allowed standards with CMake 3.8.2, 3.21.4, 3.24.3, and
+the latest release, using real fmt and checking installed library consumers.
+Third-party packages may impose additional requirements or acquire newer tools
+for their own builds. The compatibility manifest describes the shipped templates
+and their starter dependencies, not arbitrary dependencies added later.
 
 ## Git
 

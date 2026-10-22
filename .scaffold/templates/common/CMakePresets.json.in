@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": @PROJECT_PRESET_SCHEMA@,
   "cmakeMinimumRequired": {
     "major": @PROJECT_CMAKE_MAJOR@,
     "minor": @PROJECT_CMAKE_MINOR@,

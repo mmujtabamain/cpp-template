@@ -23,16 +23,12 @@ if(EXISTS "${PROJECT_ROOT}" AND NOT IS_DIRECTORY "${PROJECT_ROOT}")
     message(FATAL_ERROR "Scaffold location must be a directory.")
 endif()
 
-# Presets v5 and C++23 compiler support on all supported platforms require 3.24.
 # CMAKE_VERSION is the version of the executable running this scaffold.
 if(NOT DEFINED PROJECT_CMAKE_VERSION OR PROJECT_CMAKE_VERSION STREQUAL "")
     set(PROJECT_CMAKE_VERSION "${CMAKE_VERSION}")
 endif()
 if(NOT PROJECT_CMAKE_VERSION MATCHES "^[1-9][0-9]*\\.(0|[1-9][0-9]*)(\\.(0|[1-9][0-9]*))?$")
     message(FATAL_ERROR "CMake version must be major.minor or major.minor.patch.")
-endif()
-if(PROJECT_CMAKE_VERSION VERSION_LESS "3.24")
-    message(FATAL_ERROR "CMake 3.24 or newer is required by the generated C++23 projects and presets.")
 endif()
 if(PROJECT_CMAKE_VERSION VERSION_GREATER CMAKE_VERSION)
     message(FATAL_ERROR "Requested CMake ${PROJECT_CMAKE_VERSION} exceeds running CMake ${CMAKE_VERSION}; install it before scaffolding.")
@@ -46,6 +42,8 @@ if(PROJECT_CMAKE_PART_COUNT EQUAL 3)
     list(GET PROJECT_CMAKE_PARTS 2 PROJECT_CMAKE_PATCH)
 endif()
 set(PROJECT_CMAKE_VERSION "${PROJECT_CMAKE_MAJOR}.${PROJECT_CMAKE_MINOR}.${PROJECT_CMAKE_PATCH}")
+
+include("${CMAKE_CURRENT_LIST_DIR}/compatibility.cmake")
 
 # optionally copy template Git files; repository management belongs to the user
 if(NOT DEFINED SCAFFOLD_GIT)

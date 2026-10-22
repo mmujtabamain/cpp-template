@@ -1,0 +1,11 @@
+set(CONFIGURATION Debug)
+    if(PRESET STREQUAL "release")
+        set(CONFIGURATION Release)
+    endif()
+    set(CONFIGURE_ARGUMENTS
+        -G Ninja "-DCMAKE_BUILD_TYPE=${CONFIGURATION}"
+        "-DCMAKE_TOOLCHAIN_FILE=${PROJECT_ROOT}/external/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        -DVCPKG_MANIFEST_INSTALL=OFF
+        "-DVCPKG_INSTALLED_DIR=${PROJECT_ROOT}/vcpkg_installed"
+        "${PROJECT_ROOT}"
+    )
