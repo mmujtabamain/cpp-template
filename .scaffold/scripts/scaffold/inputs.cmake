@@ -1,6 +1,6 @@
 # MARK: Paths and input validation
 
-get_filename_component(SCAFFOLD_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+get_filename_component(SCAFFOLD_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 set(TEMPLATE_DIRECTORY "${SCAFFOLD_ROOT}/templates")
 set(STAGING_DIRECTORY "${SCAFFOLD_ROOT}/.scaffold-tmp")
 

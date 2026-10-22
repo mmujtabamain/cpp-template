@@ -150,7 +150,7 @@ python3 -m pip install -r .github/requirements.txt
 Generated projects receive a separate `.github/workflows/validate.yml` that runs
 their setup, build, and library tests. It does not run scaffold tests or require
 Python validation packages. The render-time checks in
-`.scaffold/scripts/verify-output.cmake` only check staging completeness and JSON
+`.scaffold/scripts/scaffold/verify-output.cmake` only check staging completeness and JSON
 before replacing files; they do not replace either validation suite.
 
 Git pre commit hooks run repository validation. Run it manually:
