@@ -72,6 +72,12 @@ if(NOT EXISTS "${VCPKG_ROOT}")
     # Repository metadata cleanup belongs to the user; --clean replaces the whole dependency.
 endif()
 
+# Bootstrap requires an explicit VCPKG_DOWNLOADS directory to exist.
+# Create it after cloning so the clone destination starts empty.
+if(SETUP_CLEAN)
+    file(MAKE_DIRECTORY "${VCPKG_ROOT}/downloads")
+endif()
+
 # BOOTSTRAP
 if(CMAKE_HOST_WIN32)
     set(VCPKG_EXECUTABLE "${VCPKG_ROOT}/vcpkg.exe")

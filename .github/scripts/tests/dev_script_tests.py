@@ -100,3 +100,43 @@ class DevelopmentScriptTests(ScaffoldFixture):
         self.assertEqual((metadata / "keep").read_text(), "project history")
         self.assertEqual((self.project / "notes.txt").read_text(), "user file")
         self.assertTrue((self.project / "src/sample_library.cpp").is_file())
+
+    def test_clean_creates_downloads_before_bootstrapping_fresh_clone(self):
+        self.scaffold()
+        fixture = self.workspace / "vcpkg source"
+        fixture.mkdir()
+        (fixture / "bootstrap-vcpkg.sh").write_text(
+            '#!/bin/sh\n'
+            '[ -d "$VCPKG_DOWNLOADS" ] || exit 42\n'
+            'echo ready > "$VCPKG_DOWNLOADS/ready"\n'
+            'exit 1\n'
+        )
+        (fixture / "bootstrap-vcpkg.bat").write_text(
+            '@if not exist "%VCPKG_DOWNLOADS%\\" exit /b 42\n'
+            '@echo ready>"%VCPKG_DOWNLOADS%\\ready"\n'
+            '@exit /b 1\n'
+        )
+        environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        CommandRunner.run(["git", "init"], fixture, environment=environment)
+        CommandRunner.run(["git", "add", "."], fixture, environment=environment)
+        CommandRunner.run(
+            ["git", "-c", "user.name=Setup Test", "-c", "user.email=test@example.invalid",
+             "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false",
+             "commit", "-m", "Bootstrap fixture"],
+            fixture, environment=environment,
+        )
+        environment.update({
+            "GIT_CONFIG_COUNT": "2",
+            "GIT_CONFIG_KEY_0": f"url.{fixture.as_uri()}.insteadOf",
+            "GIT_CONFIG_VALUE_0": "https://github.com/microsoft/vcpkg.git",
+            "GIT_CONFIG_KEY_1": "protocol.file.allow",
+            "GIT_CONFIG_VALUE_1": "always",
+        })
+        result = CommandRunner.run(
+            ["cmake", "-P", self.project / "scripts/setup.cmake", "--clean"],
+            self.project, environment=environment, success=False,
+        )
+        self.assertIn("vcpkg bootstrap failed", result.stdout)
+        self.assertEqual(
+            (self.project / "external/vcpkg/downloads/ready").read_text().strip(), "ready",
+        )
