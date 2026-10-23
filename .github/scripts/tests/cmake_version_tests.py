@@ -102,3 +102,20 @@ class CMakeVersionTests(ScaffoldFixture):
         self.assertFalse((self.project / "CMakePresets.json").exists())
         self.assertIn("cxx_std_14", (self.project / "CMakeLists.txt").read_text())
         self.assertIn("cmake --build build/debug", (self.project / "README.md").read_text())
+
+    def test_version_errors_show_valid_terminal_options(self):
+        for cpp, cmake in ((23, "3.99"), (20, "3.8"), (98, "3.24"), (23, "999.0")):
+            with self.subTest(cpp=cpp, cmake=cmake):
+                result = self.scaffold(cpp_version=cpp, cmake_version=cmake, success=False)
+                output = " ".join(result.stdout.split())
+                self.assertIn("Valid C++ options (minimum CMake):", output)
+                for standard, minimum in ((11, "3.8"), (14, "3.8"), (17, "3.8"), (20, "3.21"), (23, "3.24")):
+                    self.assertIn(f"--cpp-version {standard}: CMake {minimum}+", output)
+                self.assertIn("--cmake-version", output)
+                self.assertNotIn("compatibility.json", output)
+                choices = output.split("Valid CMake series", 1)[1]
+                if cpp in (20, 23):
+                    self.assertIn(f"for C++{cpp}", choices)
+                    self.assertNotIn("3.8,", choices)
+                else:
+                    self.assertIn("3.8, 3.9,", choices)
