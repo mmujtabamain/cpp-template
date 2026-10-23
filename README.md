@@ -156,6 +156,10 @@ Manage repository Git setup and cleanup **yourself**. Existing Git files, `.scaf
 
 ## Scaffold validation and generated-project validation
 
+The [scaffold module APIs](.scaffold/scripts/scaffold/README.md) use explicit
+function arguments and returned values. The entry point coordinates the modules;
+imports do no project work.
+
 This repository's `.github/validate.py` checks the scaffold: Python, Bash, and
 PowerShell syntax, generation/replacement safety, Git preservation, version
 selection, setup recovery, and commit hooks. Workflow commands are parsed with

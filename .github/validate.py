@@ -13,6 +13,7 @@ from scripts.tests.hook_tests import GitHookTests
 from scripts.tests.integration_tests import IntegrationTests
 from scripts.tests.script_syntax_tests import ScriptSyntaxTests
 from scripts.tests.cmake_version_tests import CMakeVersionTests
+from scripts.tests.scaffold_module_tests import ScaffoldModuleTests
 
 
 class ValidationApplication:
@@ -22,6 +23,7 @@ class ValidationApplication:
         test_classes = [
             ScriptSyntaxTests,
             CMakeVersionTests,
+            ScaffoldModuleTests,
             ScaffoldGenerationTests,
             ScaffoldSafetyTests,
             ScaffoldLocationTests,
