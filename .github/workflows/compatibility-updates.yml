@@ -1,0 +1,37 @@
+name: Compatibility release review
+
+on:
+  schedule:
+    - cron: '23 7 * * 1'
+  workflow_dispatch:
+  push:
+    paths:
+      - '.scaffold/compatibility.json'
+      - '.github/compatibility_watch/**'
+      - '.github/workflows/compatibility-updates.yml'
+  pull_request:
+    paths:
+      - '.scaffold/compatibility.json'
+      - '.github/compatibility_watch/**'
+      - '.github/workflows/compatibility-updates.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: Check for compatibility updates (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Test release detection
+        run: python -m unittest discover -s .github/compatibility_watch -p 'test_*.py' -v
+      - name: Check published standards and stable CMake releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Update this baseline after reviewing and testing a newer CMake release.
+        run: python .github/compatibility_watch/check_updates.py --reviewed-cmake 4.4.2
